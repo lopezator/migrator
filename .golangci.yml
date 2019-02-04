@@ -1,0 +1,48 @@
+linters:
+  enable:
+  - errcheck
+  - gocritic
+  - goimports
+  - golint
+  - govet
+  - megacheck
+
+  disable-all: true
+
+linters-settings:
+  # Enable-checks are based on the gocritic check list tagged as "stable" check here:
+  # https://github.com/go-critic/go-critic/blob/e92184cb98471e662585b9b49e9b133cab72e20a/checkers/checkers_test.go#L63
+  gocritic:
+    enabled-checks:
+    - appendAssign
+    - appendCombine
+    - assignOp
+    - builtinShadow
+    - captLocal
+    - caseOrder
+    - defaultCaseOrder
+    - dupArg
+    - dupBranchBody
+    - dupCase
+    - elseif
+    - flagDeref
+    - ifElseChain
+    - importShadow
+    - indexAlloc
+    - paramTypeCombine
+    - rangeExprCopy
+    - rangeValCopy
+    - regexpMust
+    - singleCaseSwitch
+    - sloppyLen
+    - switchTrue
+    - typeSwitchVar
+    - typeUnparen
+    - underef
+    - unlambda
+    - unslice
+    - dupSubExpr
+    - hugeParam
+
+issues:
+  exclude-use-default: false
