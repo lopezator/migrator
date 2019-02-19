@@ -2,6 +2,7 @@ package migrator
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 )
 
@@ -10,8 +11,19 @@ type Driver struct {
 	db *sql.DB
 }
 
+var placeHolder string
+
 // New creates a new postgres migrator driver
-func New(driver, dsn string) (*Driver, error) {
+func NewDriver(driver, dsn string) (*Driver, error) {
+	switch driver {
+	case "postgres":
+		placeHolder = "$1"
+	case "mysql":
+		placeHolder = "?"
+	default:
+		return nil, errors.New("driver not supported, valid values are: postgres, mysql")
+	}
+
 	db, err := sql.Open(driver, dsn)
 	if err != nil {
 		return nil, err
@@ -61,12 +73,12 @@ func (d *Driver) Versions() ([]string, error) {
 }
 
 // Migrate executes a planned migration using the postgres driver
-func (d *Driver) Migrate(migration *Migration) error {
+func (d *Driver) Migrate(direction Direction, migration *Migration) error {
 	var insertVersion string
-	if migration.Direction == Up {
-		insertVersion = "INSERT INTO " + TableName + " (version) VALUES ($1)"
-	} else if migration.Direction == Down {
-		insertVersion = "DELETE FROM " + TableName + " WHERE version=$1"
+	if direction == Up {
+		insertVersion = "INSERT INTO " + TableName + " (version) VALUES (" + placeHolder + ")"
+	} else if direction == Down {
+		insertVersion = "DELETE FROM " + TableName + " WHERE version=" + placeHolder
 	}
 
 	if migration.FuncTx != nil {
@@ -83,19 +95,21 @@ func (d *Driver) Migrate(migration *Migration) error {
 			}
 			err = tx.Commit()
 		}()
-		err = migration.FuncTx(tx)
-		if err != nil {
-			return fmt.Errorf("error executing golang migration: %s", err)
+		if funcTx, ok := migration.FuncTx[direction]; ok {
+			if err := funcTx(tx); err != nil {
+				return fmt.Errorf("error executing golang migration: %s", err)
+			}
 		}
-		if _, err = tx.Exec(insertVersion, migration.ID); err != nil {
+		if _, err := tx.Exec(insertVersion, migration.ID); err != nil {
 			return fmt.Errorf("error updating migration versions: %s", err)
 		}
 	} else {
-		err := migration.FuncDb(d.db)
-		if err != nil {
-			return fmt.Errorf("error executing golang migration: %s", err)
+		if funcDB, ok := migration.Func[direction]; ok {
+			if err := funcDB(d.db); err != nil {
+				return fmt.Errorf("error executing golang migration: %s", err)
+			}
 		}
-		if _, err = d.db.Exec(insertVersion, migration.ID); err != nil {
+		if _, err := d.db.Exec(insertVersion, migration.ID); err != nil {
 			return fmt.Errorf("error updating migration versions: %s", err)
 		}
 	}

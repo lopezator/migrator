@@ -2,11 +2,9 @@ package migrator
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"sort"
-	"sync"
-
-	"github.com/pkg/errors"
 )
 
 // Direction type up/down
@@ -29,165 +27,110 @@ const (
 	Down
 )
 
-// Source holds the defined migrations
-type Source struct {
-	sync.Mutex
+// TableName is the table name to be used in the database to hold migration state
+const TableName = "schema_migration"
+
+// Migrator is the migrator implementation
+type Migrator struct {
 	migrations map[string]*Migration
+	drv        *Driver
+}
+
+// Config holds the required migration
+type Config struct {
+	Driver string
+	Dsn    string
+}
+
+// New creates a new migrator instance
+func New(cfg *Config) (*Migrator, error) {
+	drv, err := NewDriver(cfg.Driver, cfg.Dsn)
+	if err != nil {
+		return nil, err
+	}
+	return &Migrator{drv: drv, migrations: map[string]*Migration{}}, nil
 }
 
 // Migration holds one migration information
 type Migration struct {
-	ID        string
-	Direction Direction
-	FuncDb    func(db *sql.DB) error
-	FuncTx    func(tx *sql.Tx) error
+	ID     string
+	Func   MigrationFuncMap
+	FuncTx MigrationFuncTxMap
 }
 
-// NewSource creates a source for storing Go functions as migrations.
-func NewSource() *Source {
-	return &Source{
-		migrations: map[string]*Migration{},
-	}
-}
+type MigrationFuncMap map[Direction]MigrationFunc
+type MigrationFuncTxMap map[Direction]MigrationFuncTx
+
+type MigrationFunc func(db *sql.DB) error
+type MigrationFuncTx func(tx *sql.Tx) error
 
 // AddMigrations adds migrations to the source.
-// The file parameter follows the following convention: <number>_<name>
-// Examples: 1_email_expand, 2_account_expand, 3_email_contract
-func (s *Source) AddMigrations(migrations ...*Migration) {
+func (m *Migrator) AddMigrations(migrations ...*Migration) {
 	for _, migration := range migrations {
-		func() {
-			s.Lock()
-			defer s.Unlock()
-
-			if migration.Direction == Up {
-				migration.ID += ".up.go"
-			} else if migration.Direction == Down {
-				migration.ID += ".down.go"
-			}
-
-			s.migrations[migration.ID] = migration
-		}()
+		m.migrations[migration.ID] = migration
 	}
 }
 
-// GetMigration gets a golang migration
-func (s *Source) GetMigration(id string) *Migration {
-	s.Lock()
-	defer s.Unlock()
-
-	return s.migrations[id]
-}
-
-// TableName is the table name to be used in the database to hold migration state
-const TableName = "schema_migration"
-
-// Config holds the required migration
-type Config struct {
-	direction Direction
-	max       int
-}
-
-// NewConfig creates a migrator.Config
-func NewConfig(direction Direction, max int) (*Config, error) {
-	if direction != Up && direction != Down {
-		return nil, errors.New("direction should be either migrator.Up or migrator.Down")
-	}
-	return &Config{
-		direction: direction,
-		max:       max,
-	}, nil
-}
-
-func planMigrations(cfg *Config, src *Source, applied []string) ([]*Migration, error) {
+func (m *Migrator) planMigration(direction Direction, applied []string) (*Migration, error) {
 	// Get last migration that was run
 	sort.Strings(applied)
-	var latest string
-	if len(applied) > 0 {
-		latest = applied[len(applied)-1]
-	}
 
-	// Get migration as a slice of string
+	// Get migrations as a slice of strings
 	var migrations []string
-	for _, migration := range src.migrations {
+	for _, migration := range m.migrations {
 		migrations = append(migrations, migration.ID)
 	}
 	sort.Strings(migrations)
+	count := len(applied)
 
-	// Figure out which migrations to apply
-	var result []*Migration
-	var index = -1
-	if latest != "" {
-		for index < len(migrations)-1 {
-			index++
-			if migrations[index] == latest {
-				break
-			}
+	// Figure out which migration to apply
+	var apply string
+	if direction == Up {
+		if count >= len(migrations) {
+			return nil, errors.New("migrator: no more (up) migrations to apply")
 		}
-	}
-	var apply []string
-	if cfg.direction == Up {
-		apply = migrations[index+1:]
-	} else if cfg.direction == Down && index != -1 {
-		// Add in reverse order
-		apply = make([]string, index+1)
-		for i := 0; i < index+1; i++ {
-			apply[index-i] = migrations[i]
+		apply = migrations[count]
+	} else if direction == Down {
+		if count == 0 {
+			return nil, errors.New("migrator: no more (down) migrations to apply")
 		}
-	}
-	count := len(apply)
-	if cfg.max > 0 && cfg.max < count {
-		count = cfg.max
+		apply = migrations[count-1]
 	}
 
-	// Generate slice of migrations from slice of IDs
-	for _, ID := range apply[0:count] {
-		migration := src.GetMigration(ID)
-		result = append(result, &Migration{
-			ID:        migration.ID,
-			Direction: migration.Direction,
-			FuncDb:    migration.FuncDb,
-			FuncTx:    migration.FuncTx,
-		})
+	// Get migration to apply
+	migration, ok := m.migrations[apply]
+	if !ok {
+		return nil, errors.New("migrator: migration not found")
 	}
-
-	return result, nil
+	return migration, nil
 }
 
-// Migrate runs a migration using a given driver and Source. The direction defines whether
-// the migration is up or down, and max is the maximum number of migrations to apply. If max is set to 0,
-// then there is no limit on the number of migrations to apply.
-func Migrate(cfg *Config, drv *Driver, src *Source) (int, error) {
+// Migrate runs a single migration
+func (m *Migrator) Migrate(direction Direction) (int, error) {
 	count := 0
-	applied, err := drv.Versions()
+	if direction != Up && direction != Down {
+		return count, errors.New("direction should be either migrator.Up or migrator.Down")
+	}
+
+	// get applied migrations
+	applied, err := m.drv.Versions()
 	if err != nil {
 		return count, err
 	}
-	planned, err := planMigrations(cfg, src, applied)
+
+	// plan migration
+	planned, err := m.planMigration(direction, applied)
 	if err != nil {
 		return count, err
 	}
-	for _, migration := range planned {
-		fmt.Println(fmt.Sprintf("migrator: applying migration (%s) named '%s'...", cfg.direction.String(), migration.ID))
 
-		err = drv.Migrate(migration)
-		if err != nil {
-			errorMessage := "migrator: error while running migration " + migration.ID
-
-			if migration.Direction == Up {
-				errorMessage += " (up)"
-			} else {
-				errorMessage += " (down)"
-			}
-			return count, fmt.Errorf(errorMessage+": %s", err)
-		}
-
-		fmt.Println(fmt.Sprintf("migrator: applied migration (%s) named '%s'", cfg.direction.String(), migration.ID))
-		count++
+	// apply migration
+	fmt.Println(fmt.Sprintf("migrator: applying migration (%s) named '%s'...", direction.String(), planned.ID))
+	if err := m.drv.Migrate(direction, planned); err != nil {
+		return count, fmt.Errorf("migrator: error while running migration %s (%s): %v", planned.ID, direction.String(), err)
 	}
-	if len(planned) == 0 {
-		fmt.Println("migrator: No more migrations to apply")
-	}
-	err = drv.Close()
+	fmt.Println(fmt.Sprintf("migrator: applied migration (%s) named '%s'", direction.String(), planned.ID))
+	count++
 
-	return count, err
+	return count, m.drv.Close()
 }
