@@ -36,15 +36,9 @@ type Migrator struct {
 	drv        *Driver
 }
 
-// Config holds the required migration
-type Config struct {
-	Driver string
-	Dsn    string
-}
-
 // New creates a new migrator instance
-func New(cfg *Config) (*Migrator, error) {
-	drv, err := NewDriver(cfg.Driver, cfg.Dsn)
+func New(driver, dsn string) (*Migrator, error) {
+	drv, err := NewDriver(driver, dsn)
 	if err != nil {
 		return nil, err
 	}
@@ -79,38 +73,48 @@ func NewDBMigration(id string, funcUp, funcDown func(db *sql.DB) error) *Migrati
 }
 
 // NewTxMigration instantiates a new tx migration
-func NewTxMigration(id string, funcUp, funcDown func(db *sql.Tx) error) *Migration {
+func NewTxMigration(id string, funcUp, funcDown func(tx *sql.Tx) error) *Migration {
 	return &Migration{id: id, funcTx: funcTxMap{Up: funcUp, Down: funcDown}}
 }
 
-// Migrate runs a single migration
-func (m *Migrator) Migrate(direction Direction) (int, error) {
-	count := 0
-	if direction != Up && direction != Down {
-		return count, errors.New("direction should be either migrator.Up or migrator.Down")
+// Up migrates 1 step up
+func (m *Migrator) Up() error {
+	if err := m.migrate(Up); err != nil {
+		return err
 	}
+	return nil
+}
 
+// Down migrates 1 step down
+func (m *Migrator) Down() error {
+	if err := m.migrate(Down); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Migrate runs a single migration
+func (m *Migrator) migrate(direction Direction) error {
 	// get applied migrations
 	applied, err := m.drv.Versions()
 	if err != nil {
-		return count, err
+		return err
 	}
 
 	// plan migration
 	planned, err := m.planMigration(direction, applied)
 	if err != nil {
-		return count, err
+		return err
 	}
 
 	// apply migration
 	fmt.Println(fmt.Sprintf("migrator: applying migration (%s) named '%s'...", direction.String(), planned.id))
 	if err := m.drv.Migrate(direction, planned); err != nil {
-		return count, fmt.Errorf("migrator: error while running migration %s (%s): %v", planned.id, direction.String(), err)
+		return fmt.Errorf("migrator: error while running migration %s (%s): %v", planned.id, direction.String(), err)
 	}
 	fmt.Println(fmt.Sprintf("migrator: applied migration (%s) named '%s'", direction.String(), planned.id))
-	count++
 
-	return count, m.drv.Close()
+	return m.drv.Close()
 }
 
 func (m *Migrator) planMigration(direction Direction, applied []string) (*Migration, error) {

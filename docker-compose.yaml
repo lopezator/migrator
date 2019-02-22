@@ -8,12 +8,22 @@ services:
     image: migrator:build
     depends_on:
       - postgres
+      - mariadb
     tty: true
 
   postgres:
-    image: postgres:11
+    image: postgres:11.2
     restart: always
     environment:
-      - POSTGRES_DB=migrator
+      POSTGRES_DB: migrator
     ports:
-      - 5432:5432
+      - 2345:5432
+
+  mariadb:
+    image: mariadb:10.4.3
+    restart: always
+    environment:
+      MYSQL_DATABASE: migrator
+      MYSQL_ROOT_PASSWORD: mariadb
+    ports:
+      - 6033:3306

@@ -8,7 +8,7 @@ import (
 
 // Driver is the postgres migrator.Driver implementation
 type Driver struct {
-	db *sql.DB
+	db          *sql.DB
 	placeHolder string
 }
 
@@ -16,7 +16,7 @@ type Driver struct {
 func NewDriver(name, dsn string) (*Driver, error) {
 	var placeHolder string
 	switch name {
-	case "postgres", "txdb":
+	case "postgres":
 		placeHolder = "$1"
 	case "mysql":
 		placeHolder = "?"
@@ -32,7 +32,7 @@ func NewDriver(name, dsn string) (*Driver, error) {
 	}
 
 	d := &Driver{
-		db: db,
+		db:          db,
 		placeHolder: placeHolder,
 	}
 	_, err = d.db.Exec("CREATE TABLE IF NOT EXISTS " + TableName + " (version varchar(255) not null primary key)")
@@ -76,7 +76,7 @@ func (d *Driver) Versions() ([]string, error) {
 func (d *Driver) Migrate(direction Direction, migration *Migration) error {
 	var insertVersion string
 	if direction == Up {
-		insertVersion = "INSERT INTO " + TableName + " (version) VALUES ("+ d.placeHolder + ")"
+		insertVersion = "INSERT INTO " + TableName + " (version) VALUES (" + d.placeHolder + ")"
 	} else if direction == Down {
 		insertVersion = "DELETE FROM " + TableName + " WHERE version=" + d.placeHolder
 	}
@@ -97,17 +97,21 @@ func (d *Driver) Migrate(direction Direction, migration *Migration) error {
 			err = tx.Commit()
 		}()
 		if funcTx, ok := migration.funcTx[direction]; ok {
-			if err = funcTx(tx); err != nil {
-				return fmt.Errorf("error executing golang migration: %s", err)
+			if funcTx != nil {
+				if err = funcTx(tx); err != nil {
+					return fmt.Errorf("error executing golang migration: %s", err)
+				}
 			}
 		}
 		if _, err = tx.Exec(insertVersion, migration.id); err != nil {
 			return fmt.Errorf("error updating migration versions: %s", err)
 		}
-	} else {
+	} else if migration.funcDB != nil {
 		if funcDB, ok := migration.funcDB[direction]; ok {
-			if err := funcDB(d.db); err != nil {
-				return fmt.Errorf("error executing golang migration: %s", err)
+			if funcDB != nil {
+				if err := funcDB(d.db); err != nil {
+					return fmt.Errorf("error executing golang migration: %s", err)
+				}
 			}
 		}
 		if _, err := d.db.Exec(insertVersion, migration.id); err != nil {
