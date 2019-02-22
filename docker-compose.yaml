@@ -8,26 +8,12 @@ services:
     image: migrator:build
     depends_on:
       - postgres
-      - mysql
     tty: true
 
   postgres:
     image: postgres:11
     restart: always
     environment:
-      POSTGRES_DB: migrator
-      POSTGRES_USER: migrator
-      POSTGRES_PASSWORD: migrator
+      - POSTGRES_DB=migrator
     ports:
       - 5432:5432
-
-  mysql:
-    image: mysql:8
-    restart: always
-    environment:
-      MYSQL_ROOT_PASSWORD: migrator
-      MYSQL_DATABASE: migrator
-      MYSQL_USER: migrator
-      MYSQL_PASSWORD: migrator
-    ports:
-      - 3306:3306

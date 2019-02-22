@@ -2,17 +2,28 @@ package migrator
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 )
 
 // Driver is the postgres migrator.Driver implementation
 type Driver struct {
 	db *sql.DB
+	placeHolder string
 }
 
 // NewDriver creates a new migrator driver
-func NewDriver(driver, dsn string) (*Driver, error) {
-	db, err := sql.Open(driver, dsn)
+func NewDriver(name, dsn string) (*Driver, error) {
+	var placeHolder string
+	switch name {
+	case "postgres", "txdb":
+		placeHolder = "$1"
+	case "mysql":
+		placeHolder = "?"
+	default:
+		return nil, errors.New("driver not supported, valid values are: (postgres, mysql)")
+	}
+	db, err := sql.Open(name, dsn)
 	if err != nil {
 		return nil, err
 	}
@@ -22,6 +33,7 @@ func NewDriver(driver, dsn string) (*Driver, error) {
 
 	d := &Driver{
 		db: db,
+		placeHolder: placeHolder,
 	}
 	_, err = d.db.Exec("CREATE TABLE IF NOT EXISTS " + TableName + " (version varchar(255) not null primary key)")
 	if err != nil {
@@ -64,12 +76,13 @@ func (d *Driver) Versions() ([]string, error) {
 func (d *Driver) Migrate(direction Direction, migration *Migration) error {
 	var insertVersion string
 	if direction == Up {
-		insertVersion = "INSERT INTO " + TableName + " (version) VALUES (%d)"
+		insertVersion = "INSERT INTO " + TableName + " (version) VALUES ("+ d.placeHolder + ")"
 	} else if direction == Down {
-		insertVersion = "DELETE FROM " + TableName + " WHERE version=%d"
+		insertVersion = "DELETE FROM " + TableName + " WHERE version=" + d.placeHolder
 	}
-
+	var err error
 	if migration.funcTx != nil {
+		var err error
 		tx, err := d.db.Begin()
 		if err != nil {
 			return err
@@ -84,11 +97,11 @@ func (d *Driver) Migrate(direction Direction, migration *Migration) error {
 			err = tx.Commit()
 		}()
 		if funcTx, ok := migration.funcTx[direction]; ok {
-			if err := funcTx(tx); err != nil {
+			if err = funcTx(tx); err != nil {
 				return fmt.Errorf("error executing golang migration: %s", err)
 			}
 		}
-		if _, err := tx.Exec(insertVersion, migration.id); err != nil {
+		if _, err = tx.Exec(insertVersion, migration.id); err != nil {
 			return fmt.Errorf("error updating migration versions: %s", err)
 		}
 	} else {
@@ -102,5 +115,5 @@ func (d *Driver) Migrate(direction Direction, migration *Migration) error {
 		}
 	}
 
-	return nil
+	return err
 }
