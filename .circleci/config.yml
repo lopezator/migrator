@@ -1,0 +1,20 @@
+version: 2
+jobs:
+  build:
+    machine: true
+    working_directory: ~/go/src/github.com/lopezator/migrator
+    steps:
+      - checkout
+      - run: docker-compose up -d --build
+      - run:
+          name: run mod-download
+          environment:
+            GOPROXY: https://athens.azurefd.net
+          command: docker-compose exec migrator make mod-download GOPROXY=${GOPROXY}
+      - run: docker-compose exec migrator make sanity-check
+      - run:
+          name: run tests
+          environment:
+            POSTGRES_URL: postgres://postgres@postgres:5432/migrator?sslmode=disable
+            MARIA_DB_URL: root:mariadb@tcp(mariadb:3306)/migrator
+          command: docker-compose exec migrator make test POSTGRES_URL=${POSTGRES_URL} MARIA_DB_URL=${MARIA_DB_URL}

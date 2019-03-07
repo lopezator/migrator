@@ -1,3 +1,5 @@
+[![CircleCI](https://circleci.com/gh/lopezator/migrator.svg?style=svg)](https://circleci.com/gh/lopezator/migrator)
+
 # migrator
 
 Golang migrations made easy

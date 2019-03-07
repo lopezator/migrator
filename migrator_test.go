@@ -5,6 +5,7 @@ package migrator
 import (
 	"database/sql"
 	"fmt"
+	"os"
 	"testing"
 
 	_ "github.com/lib/pq" // postgres driver
@@ -12,8 +13,7 @@ import (
 )
 
 func TestPostgres(t *testing.T) {
-	// create postgres migrator
-	postgres, err := New("postgres", "postgres://postgres@localhost:2345/migrator?sslmode=disable")
+	postgres, err := New("postgres", os.Getenv("POSTGRES_URL"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -24,8 +24,7 @@ func TestPostgres(t *testing.T) {
 }
 
 func TestMariaDB(t *testing.T) {
-	// create postgres migrator
-	mysql, err := New("mysql", "root:mariadb@tcp(localhost:6033)/migrator")
+	mysql, err := New("mysql", os.Getenv("MARIA_DB_URL"))
 	if err != nil {
 		t.Fatal(err)
 	}
