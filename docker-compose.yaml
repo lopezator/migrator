@@ -16,8 +16,6 @@ services:
     restart: always
     environment:
       POSTGRES_DB: migrator
-    ports:
-      - 2345:5432
 
   mariadb:
     image: mariadb:10.4.3
@@ -25,5 +23,3 @@ services:
     environment:
       MYSQL_DATABASE: migrator
       MYSQL_ROOT_PASSWORD: mariadb
-    ports:
-      - 6033:3306

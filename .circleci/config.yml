@@ -7,10 +7,10 @@ jobs:
       - checkout
       - run: docker-compose up -d --build
       - run:
-          name: run mod-download
+          name: run make prepare
           environment:
             GOPROXY: https://athens.azurefd.net
-          command: docker-compose exec migrator make mod-download GOPROXY=${GOPROXY}
+          command: docker-compose exec migrator make prepare GOPROXY=${GOPROXY}
       - run: docker-compose exec migrator make sanity-check
       - run:
           name: run tests

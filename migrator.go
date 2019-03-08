@@ -79,18 +79,12 @@ func NewTxMigration(id string, funcUp, funcDown func(tx *sql.Tx) error) *Migrati
 
 // Up migrates 1 step up
 func (m *Migrator) Up() error {
-	if err := m.migrate(Up); err != nil {
-		return err
-	}
-	return nil
+	return m.migrate(Up)
 }
 
 // Down migrates 1 step down
 func (m *Migrator) Down() error {
-	if err := m.migrate(Down); err != nil {
-		return err
-	}
-	return nil
+	return m.migrate(Down)
 }
 
 // Migrate runs a single migration

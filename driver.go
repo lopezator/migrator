@@ -75,49 +75,55 @@ func (d *Driver) Versions() ([]string, error) {
 // Migrate executes a planned migration using the postgres driver
 func (d *Driver) Migrate(direction Direction, migration *Migration) error {
 	var insertVersion string
-	if direction == Up {
+	switch direction {
+	case Up:
 		insertVersion = "INSERT INTO " + TableName + " (version) VALUES (" + d.placeHolder + ")"
-	} else if direction == Down {
+	case Down:
 		insertVersion = "DELETE FROM " + TableName + " WHERE version=" + d.placeHolder
 	}
-	var err error
 	if migration.funcTx != nil {
-		var err error
-		tx, err := d.db.Begin()
-		if err != nil {
-			return err
-		}
-		defer func() {
-			if err != nil {
-				if errRb := tx.Rollback(); errRb != nil {
-					err = fmt.Errorf("error rolling back: %s\n%s", errRb, err)
-				}
-				return
-			}
-			err = tx.Commit()
-		}()
-		if funcTx, ok := migration.funcTx[direction]; ok {
-			if funcTx != nil {
-				if err = funcTx(tx); err != nil {
-					return fmt.Errorf("error executing golang migration: %s", err)
-				}
-			}
-		}
-		if _, err = tx.Exec(insertVersion, migration.id); err != nil {
-			return fmt.Errorf("error updating migration versions: %s", err)
-		}
+		return d.migrateTx(insertVersion, direction, migration)
 	} else if migration.funcDB != nil {
-		if funcDB, ok := migration.funcDB[direction]; ok {
-			if funcDB != nil {
-				if err := funcDB(d.db); err != nil {
-					return fmt.Errorf("error executing golang migration: %s", err)
-				}
-			}
-		}
-		if _, err := d.db.Exec(insertVersion, migration.id); err != nil {
-			return fmt.Errorf("error updating migration versions: %s", err)
-		}
+		return d.migrateDB(insertVersion, direction, migration)
 	}
 
+	return nil
+}
+
+func (d *Driver) migrateTx(insertVersion string, direction Direction, migration *Migration) error {
+	var err error
+	tx, err := d.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			if errRb := tx.Rollback(); errRb != nil {
+				err = fmt.Errorf("error rolling back: %s\n%s", errRb, err)
+			}
+			return
+		}
+		err = tx.Commit()
+	}()
+	if funcTx, ok := migration.funcTx[direction]; ok && funcTx != nil {
+		if err = funcTx(tx); err != nil {
+			return fmt.Errorf("error executing golang migration: %s", err)
+		}
+	}
+	if _, err = tx.Exec(insertVersion, migration.id); err != nil {
+		return fmt.Errorf("error updating migration versions: %s", err)
+	}
 	return err
+}
+
+func (d *Driver) migrateDB(insertVersion string, direction Direction, migration *Migration) error {
+	if funcDB, ok := migration.funcDB[direction]; ok && funcDB != nil {
+		if err := funcDB(d.db); err != nil {
+			return fmt.Errorf("error executing golang migration: %s", err)
+		}
+	}
+	if _, err := d.db.Exec(insertVersion, migration.id); err != nil {
+		return fmt.Errorf("error updating migration versions: %s", err)
+	}
+	return nil
 }
