@@ -8,8 +8,8 @@ import (
 	"os"
 	"testing"
 
-	_ "github.com/go-sql-driver/mysql" // mysql driver
-	_ "github.com/lib/pq"              // postgres driver
+	_ "github.com/go-sql-driver/mysql"          // mysql driver
+	_ "github.com/lib/pq"                       // postgres driver
 )
 
 func TestPostgres(t *testing.T) {

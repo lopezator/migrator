@@ -2,7 +2,6 @@ package migrator
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
 )
 
@@ -18,10 +17,8 @@ func NewDriver(name, dsn string) (*Driver, error) {
 	switch name {
 	case "postgres":
 		placeHolder = "$1"
-	case "mysql":
-		placeHolder = "?"
 	default:
-		return nil, errors.New("driver not supported, valid values are: (postgres, mysql)")
+		placeHolder = "?"
 	}
 	db, err := sql.Open(name, dsn)
 	if err != nil {
