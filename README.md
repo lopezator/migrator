@@ -4,7 +4,7 @@
 [![License: MPL 2.0](https://img.shields.io/badge/License-MPL%202.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0)
 # migrator
 
-Golang migrations made easy
+Golang migrations made easy.
 
 # Features
 
@@ -14,11 +14,21 @@ Golang migrations made easy
 * GO code migrations, either transactional or transaction-less, using `*sql.DB` or `*sql.Tx`.
 * No need to use `packr`, `gobin` or others, since all migrations are just GO code.
 
+# Compatibility
+
+Although any database supported by [database/sql](https://golang.org/pkg/database/sql/) and one of its recommended 
+drivers [SQLDrivers](https://github.com/golang/go/wiki/SQLDrivers) should work ok, at the moment only `PostgreSQL` and
+`MySQL` are being explicitly tested.
+
+If you find any issue with any of the databases included under the umbrella of `database/sql`, feel free to 
+[contribute](#Contribute) by opening an issue or sending a pull request.
+
 # Usage
 
 The following example assume:
 
-- A working postgres DB conn on localhost, with postgres user, no password, and an EMPTY db named migrator.
+- A working `postgres` DB conn on localhost, with a user named `postgres`, empty password, and an empty db named 
+`migrator`.
 
 Customize this to your needs by changing the driver and/or connection settings.
 	
