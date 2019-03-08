@@ -8,7 +8,7 @@ import (
 	"os"
 	"testing"
 
-	_ "github.com/go-sql-driver/mysql" // mariadb/mysql driver
+	_ "github.com/go-sql-driver/mysql" // mysql driver
 	_ "github.com/lib/pq"              // postgres driver
 )
 
@@ -23,8 +23,8 @@ func TestPostgres(t *testing.T) {
 	}
 }
 
-func TestMariaDB(t *testing.T) {
-	mysql, err := New("mysql", os.Getenv("MARIA_DB_URL"))
+func TestMySQL(t *testing.T) {
+	mysql, err := New("mysql", os.Getenv("MYSQL_DB_URL"))
 	if err != nil {
 		t.Fatal(err)
 	}

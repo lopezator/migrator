@@ -16,5 +16,5 @@ jobs:
           name: run tests
           environment:
             POSTGRES_URL: postgres://postgres@postgres:5432/migrator?sslmode=disable
-            MARIA_DB_URL: root:mariadb@tcp(mariadb:3306)/migrator
-          command: docker-compose exec migrator make test POSTGRES_URL=${POSTGRES_URL} MARIA_DB_URL=${MARIA_DB_URL}
+            MYSQL_DB_URL: root:mysql@tcp(mysql:3306)/migrator
+          command: docker-compose exec migrator make test POSTGRES_URL=${POSTGRES_URL} MYSQL_DB_URL=${MYSQL_DB_URL}

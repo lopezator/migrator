@@ -4,7 +4,7 @@ SHELL = /bin/bash
 
 GOPROXY      = https://athens.azurefd.net
 POSTGRES_URL = postgres://postgres@postgres:5432/migrator?sslmode=disable
-MARIA_DB_URL = root:mariadb@tcp(mariadb:3306)/migrator
+MYSQL_DB_URL = root:mysql@tcp(mysql:3306)/migrator
 
 .PHONY: setup-env
 setup-dev:
@@ -29,4 +29,4 @@ golangci-lint:
 .PHONY: test
 test:
 	@echo "Running tests..."
-	2>&1 POSTGRES_URL="$(POSTGRES_URL)" MARIA_DB_URL="$(MARIA_DB_URL)" go test -tags="unit integration"
+	2>&1 POSTGRES_URL="$(POSTGRES_URL)" MYSQL_DB_URL="$(MYSQL_DB_URL)" go test -tags="unit integration"
