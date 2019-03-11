@@ -11,7 +11,8 @@ Golang migrations made easy.
 * Simple code.
 * Usage as a library, embeddable and extensible on your behalf. 
 * Support of any database supported by `database/sql`.
-* GO code migrations, either transactional or transaction-less, using `*sql.DB` or `*sql.Tx`.
+* GO code migrations, either transactional or transaction-less, using `*sql.DB` (`migrator.NewDBMigration`) or 
+`*sql.Tx` (`migrator.NewTXMigration`).
 * No need to use `packr`, `gobin` or others, since all migrations are just GO code.
 
 # Compatibility
@@ -31,7 +32,9 @@ The following example assume:
 `migrator`.
 
 Customize this to your needs by changing the driver and/or connection settings.
-	
+
+### QuickStart:
+
 ```go
 package main
 
@@ -40,12 +43,45 @@ import (
 	"log"
 
 	_ "github.com/lib/pq" // postgres driver
-	migratorpkg "github.com/lopezator/migrator"
+	"github.com/lopezator/migrator"
+)
+
+func main() { 
+    m, err := migrator.New("postgres", "postgres://postgres@localhost/migrator?sslmode=disable")
+    if err != nil {
+        log.Fatal(err)
+    }
+    m.AddMigrations( // single migration up, nil down migration
+        migrator.NewDBMigration("1",
+        func(db *sql.DB) error {
+           if _, err := db.Exec("CREATE TABLE migrator (id INT)"); err != nil {
+               return err
+           }
+           return nil
+        }, nil,
+    ))
+    if err := m.Up(); err != nil {
+        log.Fatal(err)
+    }
+}
+```
+
+### Full explained verbose example:
+
+```go
+package main
+
+import (
+	"database/sql"
+	"log"
+
+	_ "github.com/lib/pq" // postgres driver
+	"github.com/lopezator/migrator"
 )
 
 func main() {
 	// Initialize migrator with the chosen driver/dsn.
-	migrator, err := migratorpkg.New("postgres", "postgres://postgres@localhost/migrator?sslmode=disable")
+	m, err := migrator.New("postgres", "postgres://postgres@localhost/migrator?sslmode=disable")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -65,23 +101,23 @@ func main() {
 		return nil
 	}
 	// Create the migration and pass-in the two functions defined above.
-	migration1 := migratorpkg.NewTxMigration("1_version", migration1UpFunc, migration1DownFunc)
+	migration1 := migrator.NewTxMigration("1_version", migration1UpFunc, migration1DownFunc)
 
 	// Define migration 2 up, transaction-less.
-	migration2Up := func(db *sql.DB) error {
+	migration2UpFunc := func(db *sql.DB) error {
 		if _, err := db.Exec("INSERT INTO migrator (id) VALUES ($1)", 1); err != nil {
 			return err
 		}
 		return nil
 	}
 	// Create the migration and pass-in the up function defined above, no down function provided (nil).
-	migration2 := migratorpkg.NewDBMigration("2_version", migration2Up, nil)
+	migration2 := migrator.NewDBMigration("2_version", migration2UpFunc, nil)
 
 	// Add both migrations to the migrator.
-	migrator.AddMigrations(migration1, migration2)
+	m.AddMigrations(migration1, migration2)
 
 	// Migrate up step 1.
-	err = migrator.Up()
+	err = m.Up()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -90,7 +126,7 @@ func main() {
 	// - A table named `schema_migrations` with a single row: `1_version`.
 
 	// Migrate up step 2
-	err = migrator.Up()
+	err = m.Up()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -99,7 +135,7 @@ func main() {
 	// - A table named `schema_migrations` with two rows, versions: `1_version` and `2_version`.
 
 	// Migrate down step 2 (esterile in terms of data, remember, no down migration defined on `migration2`).
-	err = migrator.Down()
+	err = m.Down()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -108,7 +144,7 @@ func main() {
 	// - schema_migrations table with a single row, version: `1_version`.
 
 	// Migrate down step 2
-	err = migrator.Down()
+	err = m.Down()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -117,7 +153,7 @@ func main() {
 }
 ```
 
-Notes on example code: 
+Notes on examples above: 
 
 - Is your responsibility to provide any sortable list of IDs to migrator if you want a correct behavior from the 
 library: ints, unix timestamps, ULIDs...
@@ -126,7 +162,7 @@ library: ints, unix timestamps, ULIDs...
 without the need of saving them to variables, organize your migrations into single/multiple files... for example inside
 a `migrations` folder. As flexible as you want. 
 
-# Looking for more examples?
+### Looking for more examples?
 
 Just examine [migrator_test.go](migrator_test.go) file.
 
