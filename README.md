@@ -30,8 +30,7 @@ If you find any issue with any of the databases included under the umbrella of `
 
 The following example assume:
 
-- A working `postgres` DB conn on localhost, with a user named `postgres`, empty password, and an empty db named 
-`migrator`.
+- A working `postgres` DB conn on localhost, with a user named `postgres`, empty password, and db named `migrator`.
 
 Customize this to your needs by changing the driver and/or connection settings.
 
