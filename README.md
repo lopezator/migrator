@@ -6,6 +6,8 @@
 
 Golang migrations made easy.
 
+Disclaimer: migrator is at a very early stage of development, use it at your own risk.
+
 # Features
 
 * Simple code.
@@ -197,7 +199,7 @@ found a nice way to encapsulate both migration and version logic queries inside 
 GO code to accomplish complex tasks that couldn't be done using just SQL. Additionally it feels a little heavy for the
 task.
 
-* [https://github.com/pressly/goose](https://github.com/pressly/goose) it supports both GO and SQL migrations. 
+* [pressly/goose](https://github.com/pressly/goose) it supports both GO and SQL migrations. 
 Unfortunately it doesn't support transaction-less GO migrations. Sometimes using transactions is either not possible 
 with the combination of queries you need in a single migration, and others could be very slow and you simple don't need 
 them for that specific case. It's also pretty big, with internals difficult to follow. It's crowded with a lot of
