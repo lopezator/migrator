@@ -47,23 +47,23 @@ import (
 	"github.com/lopezator/migrator"
 )
 
-func main() { 
-    m, err := migrator.New("postgres", "postgres://postgres@localhost/migrator?sslmode=disable")
-    if err != nil {
-        log.Fatal(err)
-    }
-    m.AddMigrations( // single migration up, nil down migration
-        migrator.NewDBMigration("1",
-        func(db *sql.DB) error {
-           if _, err := db.Exec("CREATE TABLE migrator (id INT)"); err != nil {
-               return err
-           }
-           return nil
-        }, nil,
-    ))
-    if err := m.Up(); err != nil {
-        log.Fatal(err)
-    }
+func main() {
+	m, err := migrator.New("postgres", "postgres://postgres@localhost/migrator?sslmode=disable")
+	if err != nil {
+		log.Fatal(err)
+	}
+	m.AddMigrations( // single migration up, nil down migration
+		migrator.NewDBMigration("1",
+			func(db *sql.DB) error {
+				if _, err := db.Exec("CREATE TABLE migrator (id INT)"); err != nil {
+					return err
+				}
+				return nil
+			}, nil,
+		))
+	if err := m.Up(); err != nil {
+		log.Fatal(err)
+	}
 }
 ```
 
