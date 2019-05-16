@@ -2,145 +2,125 @@ package migrator
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
-	"sort"
 )
 
-// Direction type up/down
-type Direction int
-
-// String returns a string representation of the direction
-func (d Direction) String() string {
-	switch d {
-	case Up:
-		return "up"
-	case Down:
-		return "down"
-	}
-	return ""
-}
-
-// Constants for direction
-const (
-	Up Direction = iota
-	Down
-)
-
-// TableName is the table name to be used in the database to hold migration state
-const TableName = "schema_migration"
+const tableName = "migrations"
 
 // Migrator is the migrator implementation
 type Migrator struct {
-	migrations map[string]*Migration
-	drv        *Driver
+	migrations []migration
 }
 
 // New creates a new migrator instance
-func New(driver, dsn string) (*Migrator, error) {
-	drv, err := NewDriver(driver, dsn)
-	if err != nil {
-		return nil, err
-	}
-	return &Migrator{drv: drv, migrations: map[string]*Migration{}}, nil
+func New(migrations ...migration) *Migrator {
+	return &Migrator{migrations: migrations}
 }
 
-// Migration holds one migration information
+// Migrate applies all available migrations
+func (m *Migrator) Migrate(db *sql.DB) error {
+	// create migrations table if doesn't exist
+	_, err := db.Exec("CREATE TABLE IF NOT EXISTS " + tableName + " (version varchar(255) not null primary key)")
+	if err != nil {
+		return err
+	}
+
+	// count applied migrations
+	var count int
+	rows, err := db.Query("SELECT count(*) FROM " + tableName)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		_ = rows.Close()
+	}()
+	for rows.Next() {
+		if err := rows.Scan(&count); err != nil {
+			return err
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+
+	// plan migrations
+	for _, migration := range m.migrations[count:len(m.migrations)] {
+		insertVersion := "INSERT INTO " + tableName + " (version) VALUES ('" + migration.String() + "')"
+		switch m := migration.(type) {
+		case *Migration:
+			if err := migrate(db, insertVersion, m); err != nil {
+				return fmt.Errorf("migrator: error while running migrations: %v", err)
+			}
+		case *MigrationNoTx:
+			if err := migrateNoTx(db, insertVersion, m); err != nil {
+				return fmt.Errorf("migrator: error while running migrations: %v", err)
+			}
+		}
+	}
+
+	return nil
+}
+
+type migration interface {
+	String() string
+}
+
+// Migration represents a single migration
 type Migration struct {
-	id     string
-	funcDB funcDBMap
-	funcTx funcTxMap
+	Name string
+	Func func(*sql.Tx) error
 }
 
-// Func map types
-type funcDBMap map[Direction]funcDB
-type funcTxMap map[Direction]funcTx
-
-// Func types
-type funcDB func(db *sql.DB) error
-type funcTx func(tx *sql.Tx) error
-
-// AddMigrations adds migrations to the source.
-func (m *Migrator) AddMigrations(migrations ...*Migration) {
-	for _, migration := range migrations {
-		m.migrations[migration.id] = migration
-	}
+// String returns a string representation of the migration
+func (m *Migration) String() string {
+	return m.Name
 }
 
-// NewDBMigration creates a new db migration
-func NewDBMigration(id string, funcUp, funcDown func(db *sql.DB) error) *Migration {
-	return &Migration{id: id, funcDB: funcDBMap{Up: funcUp, Down: funcDown}}
+// MigrationNoTx represents a single not transactional migration
+type MigrationNoTx struct {
+	Name string
+	Func func(*sql.DB) error
 }
 
-// NewTxMigration instantiates a new tx migration
-func NewTxMigration(id string, funcUp, funcDown func(tx *sql.Tx) error) *Migration {
-	return &Migration{id: id, funcTx: funcTxMap{Up: funcUp, Down: funcDown}}
+func (m *MigrationNoTx) String() string {
+	return m.Name
 }
 
-// Up migrates 1 step up
-func (m *Migrator) Up() error {
-	return m.migrate(Up)
-}
-
-// Down migrates 1 step down
-func (m *Migrator) Down() error {
-	return m.migrate(Down)
-}
-
-// Migrate runs a single migration
-func (m *Migrator) migrate(direction Direction) error {
-	// get applied migrations
-	applied, err := m.drv.Versions()
+func migrate(db *sql.DB, insertVersion string, migration *Migration) error {
+	tx, err := db.Begin()
 	if err != nil {
 		return err
 	}
-
-	// plan migration
-	planned, err := m.planMigration(direction, applied)
-	if err != nil {
-		return err
+	defer func() {
+		if err != nil {
+			if errRb := tx.Rollback(); errRb != nil {
+				err = fmt.Errorf("error rolling back: %s\n%s", errRb, err)
+			}
+			return
+		}
+		err = tx.Commit()
+	}()
+	fmt.Println(fmt.Sprintf("migrator: applying migration named '%s'...", migration.Name))
+	if err = migration.Func(tx); err != nil {
+		return fmt.Errorf("error executing golang migration: %s", err)
 	}
-
-	// apply migration
-	fmt.Println(fmt.Sprintf("migrator: applying migration (%s) named '%s'...", direction.String(), planned.id))
-	if err := m.drv.Migrate(direction, planned); err != nil {
-		return fmt.Errorf("migrator: error while running migration %s (%s): %v", planned.id, direction.String(), err)
+	if _, err = tx.Exec(insertVersion); err != nil {
+		return fmt.Errorf("error updating migration versions: %s", err)
 	}
-	fmt.Println(fmt.Sprintf("migrator: applied migration (%s) named '%s'", direction.String(), planned.id))
+	fmt.Println(fmt.Sprintf("migrator: applied migration named '%s'", migration.Name))
 
-	return m.drv.Close()
+	return err
 }
 
-func (m *Migrator) planMigration(direction Direction, applied []string) (*Migration, error) {
-	// Get last migration that was run
-	sort.Strings(applied)
-
-	// Get migrations as a slice of strings
-	var migrations []string
-	for _, migration := range m.migrations {
-		migrations = append(migrations, migration.id)
+func migrateNoTx(db *sql.DB, insertVersion string, migration *MigrationNoTx) error {
+	fmt.Println(fmt.Sprintf("migrator: applying no tx migration named '%s'...", migration.Name))
+	if err := migration.Func(db); err != nil {
+		return fmt.Errorf("error executing golang migration: %s", err)
 	}
-	sort.Strings(migrations)
-	count := len(applied)
-
-	// Figure out which migration to apply
-	var apply string
-	if direction == Up {
-		if count >= len(migrations) {
-			return nil, errors.New("migrator: no more (up) migrations to apply")
-		}
-		apply = migrations[count]
-	} else if direction == Down {
-		if count == 0 {
-			return nil, errors.New("migrator: no more (down) migrations to apply")
-		}
-		apply = migrations[count-1]
+	if _, err := db.Exec(insertVersion); err != nil {
+		return fmt.Errorf("error updating migration versions: %s", err)
 	}
+	fmt.Println(fmt.Sprintf("migrator: applied no tx migration named '%s'...", migration.Name))
 
-	// Get migration to apply
-	migration, ok := m.migrations[apply]
-	if !ok {
-		return nil, errors.New("migrator: migration not found")
-	}
-	return migration, nil
+	return nil
 }
