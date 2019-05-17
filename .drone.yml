@@ -1,0 +1,41 @@
+kind: pipeline
+name: migrator
+
+workspace:
+  base: /go
+  path: src/github.com/lopezator/migrator
+
+steps:
+  - name: sanity-check
+    image: golang:1.12.5
+    commands:
+      - curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $GOPATH/bin v1.15.0
+      - make sanity-check
+
+  - name: test
+    image: golang:1.12.5
+    environment:
+      GO111MODULE: on
+      GOPROXY: https://athens.azurefd.net
+      POSTGRES_URL: postgres://postgres@postgres:5432/migrator?sslmode=disable
+      MYSQL_URL: root:mysql@tcp(mysql:3306)/migrator
+    commands:
+      - sleep 15
+      - make prepare
+      - make test
+
+services:
+  - name: postgres
+    image: postgres:11.2
+    ports:
+      - 5432
+    environment:
+      POSTGRES_DB: migrator
+
+  - name: mysql
+    image: mysql:8.0.15
+    ports:
+      - 3306
+    environment:
+      MYSQL_DATABASE: migrator
+      MYSQL_ROOT_PASSWORD: mysql

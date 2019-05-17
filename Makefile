@@ -19,7 +19,7 @@ mod-download:
 	go mod download GOPROXY="$(GOPROXY)"
 
 .PHONY: sanity-check
-sanity-check: mod-download golangci-lint
+sanity-check: golangci-lint
 
 .PHONY: golangci-lint
 golangci-lint:
