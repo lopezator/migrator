@@ -20,14 +20,20 @@ func New(migrations ...migration) *Migrator {
 // Migrate applies all available migrations
 func (m *Migrator) Migrate(db *sql.DB) error {
 	// create migrations table if doesn't exist
-	_, err := db.Exec("CREATE TABLE IF NOT EXISTS " + tableName + " (version varchar(255) not null primary key)")
+	_, err := db.Exec(fmt.Sprintf(`
+		CREATE TABLE IF NOT EXISTS %s (
+			id INT8 NOT NULL,
+			version VARCHAR(255) NOT NULL,
+			PRIMARY KEY (id)
+		);
+	`, tableName))
 	if err != nil {
 		return err
 	}
 
 	// count applied migrations
 	var count int
-	rows, err := db.Query("SELECT count(*) FROM " + tableName)
+	rows, err := db.Query(fmt.Sprintf("SELECT count(*) FROM %s", tableName))
 	if err != nil {
 		return err
 	}
@@ -44,8 +50,8 @@ func (m *Migrator) Migrate(db *sql.DB) error {
 	}
 
 	// plan migrations
-	for _, migration := range m.migrations[count:len(m.migrations)] {
-		insertVersion := "INSERT INTO " + tableName + " (version) VALUES ('" + migration.String() + "')"
+	for idx, migration := range m.migrations[count:len(m.migrations)] {
+		insertVersion := fmt.Sprintf("INSERT INTO %s (id, version) VALUES (%d, '%s')", tableName, idx+count, migration.String())
 		switch m := migration.(type) {
 		case *Migration:
 			if err := migrate(db, insertVersion, m); err != nil {

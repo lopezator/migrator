@@ -79,10 +79,7 @@ Just examine [migrator_test.go](migrator_test.go) file.
 ### Erm... Where are the ID's of the migrations to know their order? 🤔
 
 In order to avoid problems with different identifiers, ID collisions, etc... the order of the migrations is just the order
-being passed to the migrator. 
-
-However, including a reference of you election to the migration name like: '1 - First migration', '2 - Second migration' 
-a timestamp, or whatever sortable/recognizable for you is strongly recommended. 
+being passed to the migrator.
 
 ### Wait... no down migrations? 😱
 

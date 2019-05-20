@@ -15,7 +15,7 @@ import (
 func initMigrator(driverName, url string) error {
 	migrator := New(
 		&Migration{
-			Name: "1 - Using tx, encapsulate two queries",
+			Name: "Using tx, encapsulate two queries",
 			Func: func(tx *sql.Tx) error {
 				if _, err := tx.Exec("CREATE TABLE foo (id INT PRIMARY KEY)"); err != nil {
 					return err
@@ -27,7 +27,7 @@ func initMigrator(driverName, url string) error {
 			},
 		},
 		&MigrationNoTx{
-			Name: "2 - Using db, execute one query",
+			Name: "Using db, execute one query",
 			Func: func(db *sql.DB) error {
 				if _, err := db.Exec("INSERT INTO foo (id) VALUES (2)"); err != nil {
 					return err
