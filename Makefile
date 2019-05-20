@@ -4,7 +4,7 @@ SHELL = /bin/bash
 
 GOPROXY      = https://athens.azurefd.net
 POSTGRES_URL = postgres://postgres@postgres:5432/migrator?sslmode=disable
-MYSQL_DB_URL = root:mysql@tcp(mysql:3306)/migrator
+MYSQL_URL    = root:mysql@tcp(mysql:3306)/migrator
 
 .PHONY: setup-env
 setup-dev:
@@ -19,7 +19,7 @@ mod-download:
 	go mod download GOPROXY="$(GOPROXY)"
 
 .PHONY: sanity-check
-sanity-check: mod-download golangci-lint
+sanity-check: golangci-lint
 
 .PHONY: golangci-lint
 golangci-lint:
@@ -29,4 +29,4 @@ golangci-lint:
 .PHONY: test
 test:
 	@echo "Running tests..."
-	2>&1 POSTGRES_URL="$(POSTGRES_URL)" MYSQL_DB_URL="$(MYSQL_DB_URL)" go test -tags="unit integration"
+	2>&1 POSTGRES_URL="$(POSTGRES_URL)" MYSQL_URL="$(MYSQL_URL)" go test -tags="unit integration"

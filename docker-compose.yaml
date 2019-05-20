@@ -13,13 +13,11 @@ services:
 
   postgres:
     image: postgres:11.2
-    restart: always
     environment:
       POSTGRES_DB: migrator
 
   mysql:
     image: mysql:8.0.15
-    restart: always
     environment:
       MYSQL_DATABASE: migrator
       MYSQL_ROOT_PASSWORD: mysql
