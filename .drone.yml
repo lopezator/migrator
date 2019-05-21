@@ -20,7 +20,7 @@ steps:
       POSTGRES_URL: postgres://postgres@postgres:5432/migrator?sslmode=disable
       MYSQL_URL: root:mysql@tcp(mysql:3306)/migrator
     commands:
-      - sleep 15
+      - sleep 30
       - make prepare
       - make test
 
