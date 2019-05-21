@@ -48,7 +48,7 @@ import (
 func main() {
     m := migrator.New(
         &migrator.Migration{
-            Name: "1 - Using tx, encapsulate two queries",
+            Name: "Create table foo",
             Func: func(tx *sql.Tx) error {
                 if _, err := tx.Exec("CREATE TABLE foo (id INT PRIMARY KEY)"); err != nil {
                     return err
