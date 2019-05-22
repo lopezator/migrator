@@ -29,4 +29,4 @@ golangci-lint:
 .PHONY: test
 test:
 	@echo "Running tests..."
-	2>&1 POSTGRES_URL="$(POSTGRES_URL)" MYSQL_URL="$(MYSQL_URL)" go test -tags="unit integration"
+	2>&1 POSTGRES_URL="$(POSTGRES_URL)" MYSQL_URL="$(MYSQL_URL)" go test -tags="unit integration" -coverprofile=coverage.txt -covermode=atomic

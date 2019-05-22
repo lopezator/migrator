@@ -24,6 +24,15 @@ steps:
       - make prepare
       - make test
 
+  - name: coverage
+    image: plugins/codecov
+    settings:
+      files:
+        - ./coverage.txt
+    environment:
+      CODECOV_TOKEN:
+        from_secret: codecov_token
+
 services:
   - name: postgres
     image: postgres:11.2
