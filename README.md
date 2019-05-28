@@ -1,6 +1,7 @@
 [![DroneCI](https://cloud.drone.io/api/badges/lopezator/migrator/status.svg?branch=master)](https://cloud.drone.io/lopezator/migrator)
 [![Go Report Card](https://goreportcard.com/badge/github.com/lopezator/migrator)](https://goreportcard.com/report/github.com/lopezator/migrator)
 [![codecov](https://codecov.io/gh/lopezator/migrator/branch/master/graph/badge.svg)](https://codecov.io/gh/lopezator/migrator)
+[![Mentioned in Awesome Go](https://awesome.re/mentioned-badge.svg)](https://github.com/avelino/awesome-go#database)
 [![GoDoc](https://godoc.org/github.com/lopezator/migrator/go?status.svg)](https://godoc.org/github.com/lopezator/migrator)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 # migrator
