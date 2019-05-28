@@ -2,7 +2,7 @@
 
 SHELL = /bin/bash
 
-GOPROXY      = https://athens.azurefd.net
+GOPROXY      = https://proxy.golang.org
 POSTGRES_URL = postgres://postgres@postgres:5432/migrator?sslmode=disable
 MYSQL_URL    = root:mysql@tcp(mysql:3306)/migrator
 
