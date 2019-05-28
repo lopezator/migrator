@@ -122,3 +122,27 @@ func TestBadMigrations(t *testing.T) {
 		})
 	}
 }
+
+func TestBadMigrate(t *testing.T) {
+	db, err := sql.Open("postgres", os.Getenv("POSTGRES_URL"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := migrate(db, "BAD INSERT VERSION", &Migration{Func: func(tx *sql.Tx) error {
+		return nil
+	}}); err == nil {
+		t.Fatal("BAD INSERT VERSION should fail!")
+	}
+}
+
+func TestBadMigrateNoTx(t *testing.T) {
+	db, err := sql.Open("postgres", os.Getenv("POSTGRES_URL"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := migrateNoTx(db, "BAD INSERT VERSION", &MigrationNoTx{Func: func(db *sql.DB) error {
+		return nil
+	}}); err == nil {
+		t.Fatal("BAD INSERT VERSION should fail!")
+	}
+}
