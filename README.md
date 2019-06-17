@@ -82,6 +82,12 @@ Notes on examples above:
 
 Just examine [migrator_test.go](migrator_test.go) file.
 
+### But I don't want to write complex migrations in strings! 😥 
+
+You still can use your favorite embedding tool to write your migrations inside `.sql` files and load them into migrator!
+
+I provide a simple example using [esc](https://github.com/mjibson/esc) here: [migrator_test#L40-L51](https://github.com/lopezator/migrator/blob/master/migrator_test.go#L40-L51)
+
 ### Erm... Where are the ID's of the migrations to know their order? 🤔
 
 In order to avoid problems with different identifiers, ID collisions, etc... the order of the migrations is just the order
@@ -98,12 +104,6 @@ a defective migrations comes in the form of adding a new migration instead of re
 
 e.g. After a `CREATE TABLE foo` we'll simply add a new `DROP TABLE foo` instead of reverting the first migration,
 so both states got reflected both on the code and the database.  
-
-### But I don't want to write complex migrations in strings! 😥 
-
-You still can use your favorite embedding tool to write your migrations inside `.sql` files and load them into migrator!
-
-I provide a simple example using [esc](https://github.com/mjibson/esc) here: [migrator_test#L40-L51](https://github.com/lopezator/migrator/blob/master/migrator_test.go#L40-L51) 
 
 # Motivation
 
@@ -142,11 +142,6 @@ with the combination of queries you need in a single migration, and others could
 them for that specific case. It's also pretty big, with internals difficult to follow. It's crowded with a lot of
 functionality that could be done in userland pretty fast.
 
-## Logo
-
-The logo was taken from @ashleymcnamara's [gophers repo](https://github.com/ashleymcnamara/gophers). I've just applied 
-slight modifications to it.
-
 # Contribute
 
 Pull requests are welcome, this is an early implementation and work is needed in all areas: docs, examples, tests, ci... 
@@ -162,3 +157,8 @@ $> docker-compose exec migrator make sanity-check
 $> docker-compose exec migrator make test
 $> docker-compose down
 ```
+
+## Logo
+
+The logo was taken from @ashleymcnamara's [gophers repo](https://github.com/ashleymcnamara/gophers). I've just applied 
+slight modifications to it.
