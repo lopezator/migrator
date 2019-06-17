@@ -6,10 +6,14 @@ workspace:
   path: src/github.com/lopezator/migrator
 
 steps:
+  - name: prepare
+    image: golang:1.12.5
+    commands:
+      - make prepare
+
   - name: sanity-check
     image: golang:1.12.5
     commands:
-      - curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $GOPATH/bin v1.15.0
       - make sanity-check
 
   - name: test
@@ -21,7 +25,6 @@ steps:
       MYSQL_URL: root:mysql@tcp(mysql:3306)/migrator
     commands:
       - sleep 30
-      - make prepare
       - make test
 
   - name: coverage

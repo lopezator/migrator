@@ -95,6 +95,12 @@ a defective migrations comes in the form of adding a new migration instead of re
 e.g. After a `CREATE TABLE foo` we'll simply add a new `DROP TABLE foo` instead of reverting the first migration,
 so both states got reflected both on the code and the database.  
 
+### But I don't want to write complex migrations in strings! 😥 
+
+You still can use your favorite embedding tool to write your migrations inside `.sql` files and load them into migrator!
+
+I provide a simple example using [esc](https://github.com/mjibson/esc) here: [migrator_test#L40-L51](https://github.com/lopezator/migrator/blob/master/migrator_test.go#40-L51) 
+
 # Motivation
 
 Why another migration library?

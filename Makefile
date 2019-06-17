@@ -7,11 +7,16 @@ POSTGRES_URL = postgres://postgres@postgres:5432/migrator?sslmode=disable
 MYSQL_URL    = root:mysql@tcp(mysql:3306)/migrator
 
 .PHONY: setup-env
-setup-dev:
-	curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GOPATH)/bin v1.12.5
+setup-env:
+	GO111MODULE=off go get -u github.com/golangci/golangci-lint/cmd/golangci-lint
+	GO111MODULE=off go get -u github.com/mjibson/esc
+
+.PHONY: esc-gen
+esc-gen:
+	esc -pkg migrator -private -include=".*.sql$$" -modtime="0" testdata > sql.go
 
 .PHONY: prepare
-prepare: mod-download
+prepare: setup-env mod-download
 
 .PHONY: mod-download
 mod-download:
