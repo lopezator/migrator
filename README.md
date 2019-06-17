@@ -1,9 +1,13 @@
-[![DroneCI](https://cloud.drone.io/api/badges/lopezator/migrator/status.svg?branch=master)](https://cloud.drone.io/lopezator/migrator)
-[![Go Report Card](https://goreportcard.com/badge/github.com/lopezator/migrator)](https://goreportcard.com/report/github.com/lopezator/migrator)
-[![codecov](https://codecov.io/gh/lopezator/migrator/branch/master/graph/badge.svg)](https://codecov.io/gh/lopezator/migrator)
-[![Mentioned in Awesome Go](https://awesome.re/mentioned-badge.svg)](https://github.com/avelino/awesome-go#database)
-[![GoDoc](https://godoc.org/github.com/lopezator/migrator/go?status.svg)](https://godoc.org/github.com/lopezator/migrator)
-[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+<p align="center"><img src="https://github.com/lopezator/migrator/blob/master/logo.png" width="360"></p>
+<p align="center">
+    <a href="https://cloud.drone.io/lopezator/migrator"><img src="https://cloud.drone.io/api/badges/lopezator/migrator/status.svg?branch=master" alt="DroneCI" /></a>
+    <a href="https://goreportcard.com/report/github.com/lopezator/migrator"><img src="https://goreportcard.com/badge/github.com/lopezator/migrator" alt="Go Report Card" /></a>
+    <a href="https://codecov.io/gh/lopezator/migrator"><img src="https://codecov.io/gh/lopezator/migrator/branch/master/graph/badge.svg" alt="codecov" /></a>
+    <a href="https://github.com/avelino/awesome-go#database"><img src="https://awesome.re/mentioned-badge.svg" alt="DroneCI" /></a>
+    <a href="https://godoc.org/github.com/lopezator/migrator"><img src="https://godoc.org/github.com/lopezator/migrator/go?status.svg" alt="GoDoc" /></a>
+    <a href="https://opensource.org/licenses/Apache-2.0"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License: Apache 2.0" /></a>
+</p>
+
 # migrator
 
 Dead simple Go database migration library.
@@ -137,6 +141,11 @@ Unfortunately it doesn't support transaction-less Go migrations. Sometimes using
 with the combination of queries you need in a single migration, and others could be very slow and you simple don't need 
 them for that specific case. It's also pretty big, with internals difficult to follow. It's crowded with a lot of
 functionality that could be done in userland pretty fast.
+
+## Logo
+
+The logo was taken from @ashleymcnamara's [gophers repo](https://github.com/ashleymcnamara/gophers). I've just applied 
+slight modifications to it.
 
 # Contribute
 
