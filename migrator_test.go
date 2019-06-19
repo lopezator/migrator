@@ -14,7 +14,19 @@ import (
 	_ "github.com/lib/pq"              // postgres driver
 )
 
-func initMigrator(driverName, url string) error {
+func TestPostgres(t *testing.T) {
+	if err := migrateTest("postgres", os.Getenv("POSTGRES_URL")); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestMySQL(t *testing.T) {
+	if err := migrateTest("mysql", os.Getenv("MYSQL_URL")); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func migrateTest(driverName, url string) error {
 	migrator := New(
 		&Migration{
 			Name: "Using tx, encapsulate two queries",
@@ -64,15 +76,17 @@ func initMigrator(driverName, url string) error {
 	return nil
 }
 
-func TestPostgres(t *testing.T) {
-	if err := initMigrator("postgres", os.Getenv("POSTGRES_URL")); err != nil {
+func TestMigrationNumber(t *testing.T) {
+	db, err := sql.Open("postgres", os.Getenv("POSTGRES_URL"))
+	if err != nil {
 		t.Fatal(err)
 	}
-}
-
-func TestMySQL(t *testing.T) {
-	if err := initMigrator("mysql", os.Getenv("MYSQL_URL")); err != nil {
+	count, err := countApplied(db)
+	if err != nil {
 		t.Fatal(err)
+	}
+	if count != 3 {
+		t.Fatal("db applied migration number should be 3")
 	}
 }
 
@@ -137,7 +151,7 @@ func TestBadMigrations(t *testing.T) {
 }
 
 func TestBadMigrate(t *testing.T) {
-	db, err := sql.Open("postgres", os.Getenv("POSTGRES_URL"))
+	db, err := sql.Open("mysql", os.Getenv("MYSQL_URL"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -157,5 +171,26 @@ func TestBadMigrateNoTx(t *testing.T) {
 		return nil
 	}}); err == nil {
 		t.Fatal("BAD INSERT VERSION should fail!")
+	}
+}
+
+func TestBadMigrationNumber(t *testing.T) {
+	db, err := sql.Open("mysql", os.Getenv("MYSQL_URL"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	migrator := New(
+		&Migration{
+			Name: "bad migration number",
+			Func: func(tx *sql.Tx) error {
+				if _, err := tx.Exec("CREATE TABLE bar (id INT PRIMARY KEY)"); err != nil {
+					return err
+				}
+				return nil
+			},
+		},
+	)
+	if err := migrator.Migrate(db); err == nil {
+		t.Fatalf("BAD MIGRATION NUMBER should fail: %v", err)
 	}
 }

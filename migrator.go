@@ -2,6 +2,7 @@ package migrator
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 )
 
@@ -32,21 +33,13 @@ func (m *Migrator) Migrate(db *sql.DB) error {
 	}
 
 	// count applied migrations
-	var count int
-	rows, err := db.Query(fmt.Sprintf("SELECT count(*) FROM %s", tableName))
+	count, err := countApplied(db)
 	if err != nil {
 		return err
 	}
-	defer func() {
-		_ = rows.Close()
-	}()
-	for rows.Next() {
-		if err := rows.Scan(&count); err != nil {
-			return err
-		}
-	}
-	if err := rows.Err(); err != nil {
-		return err
+
+	if count > len(m.migrations) {
+		return errors.New("migrator: applied migration number on db cannot be greater than the defined migration list")
 	}
 
 	// plan migrations
@@ -65,6 +58,27 @@ func (m *Migrator) Migrate(db *sql.DB) error {
 	}
 
 	return nil
+}
+
+func countApplied(db *sql.DB) (int, error) {
+	// count applied migrations
+	var count int
+	rows, err := db.Query(fmt.Sprintf("SELECT count(*) FROM %s", tableName))
+	if err != nil {
+		return 0, err
+	}
+	defer func() {
+		_ = rows.Close()
+	}()
+	for rows.Next() {
+		if err := rows.Scan(&count); err != nil {
+			return 0, err
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return 0, err
+	}
+	return count, nil
 }
 
 type migration interface {
