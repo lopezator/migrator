@@ -15,9 +15,13 @@ services:
     image: postgres:11.2
     environment:
       POSTGRES_DB: migrator
+    ports:
+      - 2345:5432
 
   mysql:
     image: mysql:8.0.15
     environment:
       MYSQL_DATABASE: migrator
       MYSQL_ROOT_PASSWORD: mysql
+    ports:
+      - 6033:3306
