@@ -18,6 +18,29 @@ func New(migrations ...migration) *Migrator {
 	return &Migrator{migrations: migrations}
 }
 
+// Pending prints all pending (not yet applied) migrations
+func (m *Migrator) Pending(db *sql.DB) error {
+	count, err := countApplied(db)
+	if err != nil {
+		return err
+	}
+	if count > len(m.migrations) {
+		return errors.New("migrator: applied migration number on db cannot be greater than the defined migration list")
+	}
+
+	pending := m.migrations[count:len(m.migrations)]
+
+	if len(pending) == 0 {
+		fmt.Println("migrator: no dirty migrations")
+	} else {
+		fmt.Println("migrator: pending migrations")
+		for idx, migration := range pending {
+			fmt.Printf("  - (%d) %s \n", count+idx, migration.String())
+		}
+	}
+	return nil
+}
+
 // Migrate applies all available migrations
 func (m *Migrator) Migrate(db *sql.DB) error {
 	// create migrations table if doesn't exist
