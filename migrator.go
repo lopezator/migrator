@@ -20,10 +20,8 @@ func New(migrations ...migration) *Migrator {
 
 // Pending prints all pending (not yet applied) migrations
 func (m *Migrator) Pending(db *sql.DB) error {
-	count, err := countApplied(db)
-	if err != nil {
-		return err
-	}
+	count, _ := countApplied(db)
+
 	if count > len(m.migrations) {
 		return errors.New("migrator: applied migration number on db cannot be greater than the defined migration list")
 	}

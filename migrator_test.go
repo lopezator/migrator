@@ -69,7 +69,16 @@ func migrateTest(driverName, url string) error {
 	if err != nil {
 		return err
 	}
+
+	if err := migrator.Pending(db); err != nil {
+		return err
+	}
+
 	if err := migrator.Migrate(db); err != nil {
+		return err
+	}
+
+	if err := migrator.Pending(db); err != nil {
 		return err
 	}
 
