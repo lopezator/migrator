@@ -86,7 +86,7 @@ Just examine [migrator_test.go](migrator_test.go) file.
 
 You still can use your favorite embedding tool to write your migrations inside `.sql` files and load them into migrator!
 
-I provide a simple example using [esc](https://github.com/mjibson/esc) here: [migrator_test#L40-L51](https://github.com/lopezator/migrator/blob/master/migrator_test.go#L40-L51)
+I provide a simple example using [esc](https://github.com/mjibson/esc) on the `Using tx, one embedded query` test here: [migrator_test](https://github.com/lopezator/migrator/blob/master/migrator_test.go)
 
 ### Erm... Where are the ID's of the migrations to know their order? 🤔
 
