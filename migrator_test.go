@@ -9,26 +9,26 @@ import (
 	"os"
 	"strings"
 	"testing"
-
+	"gotest.tools/assert"
 	_ "github.com/go-sql-driver/mysql" // mysql driver
 	_ "github.com/lib/pq"              // postgres driver
 )
 
 func TestPostgres(t *testing.T) {
-	if err := migrateTest("postgres", os.Getenv("POSTGRES_URL")); err != nil {
+	if err := migrateTest(t, "postgres", os.Getenv("POSTGRES_URL")); err != nil {
 		t.Fatal(err)
 	}
 }
 
-func TestMySQL(t *testing.T) {
-	if err := migrateTest("mysql", os.Getenv("MYSQL_URL")); err != nil {
-		t.Fatal(err)
-	}
-}
+//func TestMySQL(t *testing.T) {
+//	if err := migrateTest(t, "mysql", os.Getenv("MYSQL_URL")); err != nil {
+//		t.Fatal(err)
+//	}
+//}
 
-func migrateTest(driverName, url string) error {
+func migrateTest(t *testing.T, driverName, url string) error {
 	migrator := New(
-		&Migration{
+		&MigrationTx{
 			Name: "Using tx, encapsulate two queries",
 			Func: func(tx *sql.Tx) error {
 				if _, err := tx.Exec("CREATE TABLE foo (id INT PRIMARY KEY)"); err != nil {
@@ -49,7 +49,7 @@ func migrateTest(driverName, url string) error {
 				return nil
 			},
 		},
-		&Migration{
+		&MigrationTx{
 			Name: "Using tx, one embedded query",
 			Func: func(tx *sql.Tx) error {
 				query, err := _escFSString(false, "/testdata/0_bar.sql")
@@ -66,21 +66,24 @@ func migrateTest(driverName, url string) error {
 
 	// Migrate both steps up
 	db, err := sql.Open(driverName, url)
+
+	db.Exec("DROP TABLE IF EXISTS migrations;")
+	db.Exec("DROP TABLE IF EXISTS foo;")
+	db.Exec("DROP TABLE IF EXISTS bar;")
+
 	if err != nil {
 		return err
 	}
 
-	if err := migrator.Pending(db); err != nil {
-		return err
-	}
+	assert.Equal(t, len(migrator.Applied(db)), 0)
+	assert.Equal(t, len(migrator.Pending(db)), 3)
 
 	if err := migrator.Migrate(db); err != nil {
 		return err
 	}
 
-	if err := migrator.Pending(db); err != nil {
-		return err
-	}
+	assert.Equal(t, len(migrator.Applied(db)), 3)
+	assert.Equal(t, len(migrator.Pending(db)), 0)
 
 	return nil
 }
@@ -100,7 +103,7 @@ func TestMigrationNumber(t *testing.T) {
 }
 
 func TestDatabaseNotFound(t *testing.T) {
-	migrator := New(&Migration{})
+	migrator := New(&MigrationTx{})
 	db, _ := sql.Open("postgres", "")
 	if err := migrator.Migrate(db); err == nil {
 		t.Fatal(err)
@@ -124,7 +127,7 @@ func TestBadMigrations(t *testing.T) {
 	}{
 		{
 			name: "bad tx migration",
-			input: New(&Migration{
+			input: New(&MigrationTx{
 				Name: "bad tx migration",
 				Func: func(tx *sql.Tx) error {
 					if _, err := tx.Exec("FAIL FAST"); err != nil {
@@ -164,7 +167,7 @@ func TestBadMigrate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := migrate(db, "BAD INSERT VERSION", &Migration{Name: "bad insert version", Func: func(tx *sql.Tx) error {
+	if err := migrate(db, "BAD INSERT VERSION", &MigrationTx{Name: "bad insert version", Func: func(tx *sql.Tx) error {
 		return nil
 	}}); err == nil {
 		t.Fatal("BAD INSERT VERSION should fail!")
@@ -189,7 +192,7 @@ func TestBadMigrationNumber(t *testing.T) {
 		t.Fatal(err)
 	}
 	migrator := New(
-		&Migration{
+		&MigrationTx{
 			Name: "bad migration number",
 			Func: func(tx *sql.Tx) error {
 				if _, err := tx.Exec("CREATE TABLE bar (id INT PRIMARY KEY)"); err != nil {

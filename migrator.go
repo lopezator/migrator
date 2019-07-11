@@ -10,33 +10,24 @@ const tableName = "migrations"
 
 // Migrator is the migrator implementation
 type Migrator struct {
-	migrations []migration
+	migrations []Migration
 }
 
 // New creates a new migrator instance
-func New(migrations ...migration) *Migrator {
+func New(migrations ...Migration) *Migrator {
 	return &Migrator{migrations: migrations}
 }
 
 // Pending prints all pending (not yet applied) migrations
-func (m *Migrator) Pending(db *sql.DB) error {
+func (m *Migrator) Pending(db *sql.DB) []Migration {
 	count, _ := countApplied(db)
+	return m.migrations[count:len(m.migrations)]
+}
 
-	if count > len(m.migrations) {
-		return errors.New("migrator: applied migration number on db cannot be greater than the defined migration list")
-	}
-
-	pending := m.migrations[count:len(m.migrations)]
-
-	if len(pending) == 0 {
-		fmt.Println("migrator: no dirty migrations")
-	} else {
-		fmt.Println("migrator: pending migrations")
-		for idx, migration := range pending {
-			fmt.Printf("  - (%d) %s \n", count+idx, migration.String())
-		}
-	}
-	return nil
+// Applied prints all applied migrations
+func (m *Migrator) Applied(db *sql.DB) []Migration {
+	count, _ := countApplied(db)
+	return m.migrations[0:count]
 }
 
 // Migrate applies all available migrations
@@ -67,7 +58,7 @@ func (m *Migrator) Migrate(db *sql.DB) error {
 	for idx, migration := range m.migrations[count:len(m.migrations)] {
 		insertVersion := fmt.Sprintf("INSERT INTO %s (id, version) VALUES (%d, '%s')", tableName, idx+count, migration.String())
 		switch m := migration.(type) {
-		case *Migration:
+		case *MigrationTx:
 			if err := migrate(db, insertVersion, m); err != nil {
 				return fmt.Errorf("migrator: error while running migrations: %v", err)
 			}
@@ -102,18 +93,18 @@ func countApplied(db *sql.DB) (int, error) {
 	return count, nil
 }
 
-type migration interface {
+type Migration interface {
 	String() string
 }
 
 // Migration represents a single migration
-type Migration struct {
+type MigrationTx struct {
 	Name string
 	Func func(*sql.Tx) error
 }
 
 // String returns a string representation of the migration
-func (m *Migration) String() string {
+func (m *MigrationTx) String() string {
 	return m.Name
 }
 
@@ -127,7 +118,7 @@ func (m *MigrationNoTx) String() string {
 	return m.Name
 }
 
-func migrate(db *sql.DB, insertVersion string, migration *Migration) error {
+func migrate(db *sql.DB, insertVersion string, migration *MigrationTx) error {
 	tx, err := db.Begin()
 	if err != nil {
 		return err
