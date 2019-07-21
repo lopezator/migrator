@@ -6,7 +6,7 @@ import (
 	"fmt"
 )
 
-const tableName = "migrations"
+const defaultTableName = "migrations"
 
 // Migrator is the migrator implementation
 type Migrator struct {
@@ -19,7 +19,11 @@ func New(migrations ...migration) *Migrator {
 }
 
 // Migrate applies all available migrations
-func (m *Migrator) Migrate(db *sql.DB) error {
+func (m *Migrator) Migrate(db *sql.DB, schemaVersionTable ...string) error {
+	tableName := defaultTableName
+	if len(schemaVersionTable) > 0 {
+		tableName = schemaVersionTable[0]
+	}
 	// create migrations table if doesn't exist
 	_, err := db.Exec(fmt.Sprintf(`
 		CREATE TABLE IF NOT EXISTS %s (
@@ -33,7 +37,7 @@ func (m *Migrator) Migrate(db *sql.DB) error {
 	}
 
 	// count applied migrations
-	count, err := countApplied(db)
+	count, err := countApplied(db, tableName)
 	if err != nil {
 		return err
 	}
@@ -60,7 +64,7 @@ func (m *Migrator) Migrate(db *sql.DB) error {
 	return nil
 }
 
-func countApplied(db *sql.DB) (int, error) {
+func countApplied(db *sql.DB, tableName string) (int, error) {
 	// count applied migrations
 	var count int
 	rows, err := db.Query(fmt.Sprintf("SELECT count(*) FROM %s", tableName))

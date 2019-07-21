@@ -14,6 +14,8 @@ import (
 	_ "github.com/lib/pq"              // postgres driver
 )
 
+const schemaVersionTable = "migrationsTest"
+
 func TestPostgres(t *testing.T) {
 	if err := migrateTest("postgres", os.Getenv("POSTGRES_URL")); err != nil {
 		t.Fatal(err)
@@ -53,7 +55,7 @@ func migrateTest(driverName, url string) error {
 			Name: "Using tx, one embedded query",
 			Func: func(tx *sql.Tx) error {
 				query, err := _escFSString(false, "/testdata/0_bar.sql")
-				if err != nil  {
+				if err != nil {
 					return err
 				}
 				if _, err := tx.Exec(query); err != nil {
@@ -69,7 +71,7 @@ func migrateTest(driverName, url string) error {
 	if err != nil {
 		return err
 	}
-	if err := migrator.Migrate(db); err != nil {
+	if err := migrator.Migrate(db, schemaVersionTable); err != nil {
 		return err
 	}
 
@@ -81,7 +83,7 @@ func TestMigrationNumber(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	count, err := countApplied(db)
+	count, err := countApplied(db, schemaVersionTable)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,7 +95,7 @@ func TestMigrationNumber(t *testing.T) {
 func TestDatabaseNotFound(t *testing.T) {
 	migrator := New(&Migration{})
 	db, _ := sql.Open("postgres", "")
-	if err := migrator.Migrate(db); err == nil {
+	if err := migrator.Migrate(db, schemaVersionTable); err == nil {
 		t.Fatal(err)
 	}
 }
@@ -103,7 +105,7 @@ func TestBadMigrations(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = db.Exec(fmt.Sprintf("DROP TABLE IF EXISTS %s", tableName))
+	_, err = db.Exec(fmt.Sprintf("DROP TABLE IF EXISTS %s", schemaVersionTable))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -143,7 +145,7 @@ func TestBadMigrations(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			err := errors.New("bla")
 			err.Error()
-			if err := tt.input.Migrate(db); !strings.Contains(err.Error(), "pq: syntax error")  {
+			if err := tt.input.Migrate(db); !strings.Contains(err.Error(), "pq: syntax error") {
 				t.Fatal(err)
 			}
 		})
@@ -190,7 +192,7 @@ func TestBadMigrationNumber(t *testing.T) {
 			},
 		},
 	)
-	if err := migrator.Migrate(db); err == nil {
+	if err := migrator.Migrate(db, schemaVersionTable); err == nil {
 		t.Fatalf("BAD MIGRATION NUMBER should fail: %v", err)
 	}
 }
