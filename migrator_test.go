@@ -14,16 +14,22 @@ import (
 	_ "github.com/lib/pq"              // postgres driver
 )
 
-const schemaVersionTable = "migrationsTest"
+const testTableName = "testMigrationsTable"
 
 func TestPostgres(t *testing.T) {
 	if err := migrateTest("postgres", os.Getenv("POSTGRES_URL")); err != nil {
+		t.Fatal(err)
+	}
+	if err := migrateNamedTest("postgres", os.Getenv("POSTGRES_URL")); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestMySQL(t *testing.T) {
 	if err := migrateTest("mysql", os.Getenv("MYSQL_URL")); err != nil {
+		t.Fatal(err)
+	}
+	if err := migrateNamedTest("mysql", os.Getenv("MYSQL_URL")); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -71,7 +77,34 @@ func migrateTest(driverName, url string) error {
 	if err != nil {
 		return err
 	}
-	if err := migrator.Migrate(db, schemaVersionTable); err != nil {
+	if err := migrator.Migrate(db); err != nil {
+		return err
+	}
+
+	return nil
+}
+func migrateNamedTest(driverName, url string) error {
+	migrator := NewNamed(testTableName,
+		&Migration{
+			Name: "Using tx, encapsulate two queries",
+			Func: func(tx *sql.Tx) error {
+				if _, err := tx.Exec("CREATE TABLE named_foo (id INT PRIMARY KEY)"); err != nil {
+					return err
+				}
+				if _, err := tx.Exec("INSERT INTO named_foo (id) VALUES (1)"); err != nil {
+					return err
+				}
+				return nil
+			},
+		},
+	)
+
+	// Migrate both steps up
+	db, err := sql.Open(driverName, url)
+	if err != nil {
+		return err
+	}
+	if err := migrator.Migrate(db); err != nil {
 		return err
 	}
 
@@ -79,23 +112,28 @@ func migrateTest(driverName, url string) error {
 }
 
 func TestMigrationNumber(t *testing.T) {
+	testMigrationNumber(t, defaultTableName, 3)
+	testMigrationNumber(t, testTableName, 1)
+}
+
+func testMigrationNumber(t *testing.T, tableName string, migrationsCount int) {
 	db, err := sql.Open("postgres", os.Getenv("POSTGRES_URL"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	count, err := countApplied(db, schemaVersionTable)
+	count, err := countApplied(db, tableName)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if count != 3 {
-		t.Fatal("db applied migration number should be 3")
+	if count != migrationsCount {
+		t.Fatalf("db applied migration number should be %d", migrationsCount)
 	}
 }
 
 func TestDatabaseNotFound(t *testing.T) {
 	migrator := New(&Migration{})
 	db, _ := sql.Open("postgres", "")
-	if err := migrator.Migrate(db, schemaVersionTable); err == nil {
+	if err := migrator.Migrate(db); err == nil {
 		t.Fatal(err)
 	}
 }
@@ -105,7 +143,7 @@ func TestBadMigrations(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = db.Exec(fmt.Sprintf("DROP TABLE IF EXISTS %s", schemaVersionTable))
+	_, err = db.Exec(fmt.Sprintf("DROP TABLE IF EXISTS %s", defaultTableName))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -192,7 +230,7 @@ func TestBadMigrationNumber(t *testing.T) {
 			},
 		},
 	)
-	if err := migrator.Migrate(db, schemaVersionTable); err == nil {
+	if err := migrator.Migrate(db); err == nil {
 		t.Fatalf("BAD MIGRATION NUMBER should fail: %v", err)
 	}
 }

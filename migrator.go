@@ -10,20 +10,21 @@ const defaultTableName = "migrations"
 
 // Migrator is the migrator implementation
 type Migrator struct {
+	tableName  string
 	migrations []migration
 }
 
 // New creates a new migrator instance
 func New(migrations ...migration) *Migrator {
-	return &Migrator{migrations: migrations}
+	return NewNamed(defaultTableName, migrations...)
+}
+
+func NewNamed(tableName string, migrations ...migration) *Migrator {
+	return &Migrator{migrations: migrations, tableName: tableName}
 }
 
 // Migrate applies all available migrations
-func (m *Migrator) Migrate(db *sql.DB, schemaVersionTable ...string) error {
-	tableName := defaultTableName
-	if len(schemaVersionTable) > 0 {
-		tableName = schemaVersionTable[0]
-	}
+func (m *Migrator) Migrate(db *sql.DB) error {
 	// create migrations table if doesn't exist
 	_, err := db.Exec(fmt.Sprintf(`
 		CREATE TABLE IF NOT EXISTS %s (
@@ -31,13 +32,13 @@ func (m *Migrator) Migrate(db *sql.DB, schemaVersionTable ...string) error {
 			version VARCHAR(255) NOT NULL,
 			PRIMARY KEY (id)
 		);
-	`, tableName))
+	`, m.tableName))
 	if err != nil {
 		return err
 	}
 
 	// count applied migrations
-	count, err := countApplied(db, tableName)
+	count, err := countApplied(db, m.tableName)
 	if err != nil {
 		return err
 	}
@@ -48,7 +49,7 @@ func (m *Migrator) Migrate(db *sql.DB, schemaVersionTable ...string) error {
 
 	// plan migrations
 	for idx, migration := range m.migrations[count:len(m.migrations)] {
-		insertVersion := fmt.Sprintf("INSERT INTO %s (id, version) VALUES (%d, '%s')", tableName, idx+count, migration.String())
+		insertVersion := fmt.Sprintf("INSERT INTO %s (id, version) VALUES (%d, '%s')", m.tableName, idx+count, migration.String())
 		switch m := migration.(type) {
 		case *Migration:
 			if err := migrate(db, insertVersion, m); err != nil {
