@@ -6,16 +6,21 @@ import (
 	"fmt"
 )
 
-const tableName = "migrations"
+const defaultTableName = "migrations"
 
 // Migrator is the migrator implementation
 type Migrator struct {
+	tableName  string
 	migrations []migration
 }
 
 // New creates a new migrator instance
 func New(migrations ...migration) *Migrator {
-	return &Migrator{migrations: migrations}
+	return NewNamed(defaultTableName, migrations...)
+}
+
+func NewNamed(tableName string, migrations ...migration) *Migrator {
+	return &Migrator{migrations: migrations, tableName: tableName}
 }
 
 // Migrate applies all available migrations
@@ -27,13 +32,13 @@ func (m *Migrator) Migrate(db *sql.DB) error {
 			version VARCHAR(255) NOT NULL,
 			PRIMARY KEY (id)
 		);
-	`, tableName))
+	`, m.tableName))
 	if err != nil {
 		return err
 	}
 
 	// count applied migrations
-	count, err := countApplied(db)
+	count, err := countApplied(db, m.tableName)
 	if err != nil {
 		return err
 	}
@@ -44,7 +49,7 @@ func (m *Migrator) Migrate(db *sql.DB) error {
 
 	// plan migrations
 	for idx, migration := range m.migrations[count:len(m.migrations)] {
-		insertVersion := fmt.Sprintf("INSERT INTO %s (id, version) VALUES (%d, '%s')", tableName, idx+count, migration.String())
+		insertVersion := fmt.Sprintf("INSERT INTO %s (id, version) VALUES (%d, '%s')", m.tableName, idx+count, migration.String())
 		switch m := migration.(type) {
 		case *Migration:
 			if err := migrate(db, insertVersion, m); err != nil {
@@ -60,7 +65,7 @@ func (m *Migrator) Migrate(db *sql.DB) error {
 	return nil
 }
 
-func countApplied(db *sql.DB) (int, error) {
+func countApplied(db *sql.DB, tableName string) (int, error) {
 	// count applied migrations
 	var count int
 	rows, err := db.Query(fmt.Sprintf("SELECT count(*) FROM %s", tableName))
