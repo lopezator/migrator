@@ -19,6 +19,7 @@ func New(migrations ...migration) *Migrator {
 	return NewNamed(defaultTableName, migrations...)
 }
 
+// NewNamed creates a new migrator instance and stating the migrations table name
 func NewNamed(tableName string, migrations ...migration) *Migrator {
 	return &Migrator{migrations: migrations, tableName: tableName}
 }
