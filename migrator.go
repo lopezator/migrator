@@ -68,6 +68,12 @@ func (m *Migrator) Migrate(db *sql.DB) error {
 	return nil
 }
 
+// Pending returns all pending (not yet applied) migrations
+func (m *Migrator) Pending(db *sql.DB) []interface{} {
+	count, _ := countApplied(db)
+	return m.migrations[count:len(m.migrations)]
+}
+
 func countApplied(db *sql.DB) (int, error) {
 	// count applied migrations
 	var count int
