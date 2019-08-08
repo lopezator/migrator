@@ -11,17 +11,25 @@ const defaultTableName = "migrations"
 // Migrator is the migrator implementation
 type Migrator struct {
 	tableName  string
-	migrations []migration
+	migrations []interface{}
 }
 
 // New creates a new migrator instance
-func New(migrations ...migration) *Migrator {
+func New(migrations ...interface{}) (*Migrator, error) {
 	return NewNamed(defaultTableName, migrations...)
 }
 
 // NewNamed creates a new migrator instance and stating the migrations table name
-func NewNamed(tableName string, migrations ...migration) *Migrator {
-	return &Migrator{migrations: migrations, tableName: tableName}
+func NewNamed(tableName string, migrations ...interface{}) (*Migrator, error) {
+		for _, m := range migrations {
+		switch m.(type) {
+		case *Migration:
+		case *MigrationNoTx:
+		default:
+			return nil, errors.New("migrator: invalid migration type")
+		}
+	}
+  return &Migrator{migrations: migrations, tableName: tableName}, nil
 }
 
 // Migrate applies all available migrations
@@ -50,7 +58,7 @@ func (m *Migrator) Migrate(db *sql.DB) error {
 
 	// plan migrations
 	for idx, migration := range m.migrations[count:len(m.migrations)] {
-		insertVersion := fmt.Sprintf("INSERT INTO %s (id, version) VALUES (%d, '%s')", m.tableName, idx+count, migration.String())
+		insertVersion := fmt.Sprintf("INSERT INTO %s (id, version) VALUES (%d, '%s')", m.tableName, idx+count, migration.(fmt.Stringer).String())
 		switch m := migration.(type) {
 		case *Migration:
 			if err := migrate(db, insertVersion, m); err != nil {
@@ -66,7 +74,13 @@ func (m *Migrator) Migrate(db *sql.DB) error {
 	return nil
 }
 
-func countApplied(db *sql.DB, tableName string) (int, error) {
+// Pending returns all pending (not yet applied) migrations
+func (m *Migrator) Pending(db *sql.DB) []interface{} {
+	count, _ := countApplied(db, m.tableName)
+	return m.migrations[count:len(m.migrations)]
+}
+
+func countApplied(db *sql.DB, tableName) (int, error) {
 	// count applied migrations
 	var count int
 	rows, err := db.Query(fmt.Sprintf("SELECT count(*) FROM %s", tableName))
@@ -85,10 +99,6 @@ func countApplied(db *sql.DB, tableName string) (int, error) {
 		return 0, err
 	}
 	return count, nil
-}
-
-type migration interface {
-	String() string
 }
 
 // Migration represents a single migration
