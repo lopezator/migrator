@@ -68,7 +68,7 @@ func migrateTest(driverName, url string) error {
 	return nil
 }
 func migrateNamedTest(driverName, url string) error {
-	migrator := NewNamed(testTableName,
+	migrator, _ := NewNamed(testTableName,
 		&Migration{
 			Name: "Using tx, encapsulate two queries",
 			Func: func(tx *sql.Tx) error {
