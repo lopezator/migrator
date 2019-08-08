@@ -4,7 +4,6 @@ package migrator
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -55,7 +54,7 @@ func migrateTest(driverName, url string) error {
 		return err
 	}
 
-	// Migrate both steps up
+	// Migrate up
 	db, err := sql.Open(driverName, url)
 	if err != nil {
 		return err
@@ -153,9 +152,8 @@ func TestBadMigrations(t *testing.T) {
 
 	for _, tt := range migrators {
 		t.Run(tt.name, func(t *testing.T) {
-			err := errors.New("bla")
-			err.Error()
-			if err := tt.input.Migrate(db); !strings.Contains(err.Error(), "pq: syntax error") {
+			err := tt.input.Migrate(db)
+			if err != nil && !strings.Contains(err.Error(), "pq: syntax error") {
 				t.Fatal(err)
 			}
 		})
@@ -204,5 +202,32 @@ func TestBadMigrationNumber(t *testing.T) {
 	))
 	if err := migrator.Migrate(db); err == nil {
 		t.Fatalf("BAD MIGRATION NUMBER should fail: %v", err)
+	}
+}
+
+func TestPending(t *testing.T) {
+	db, err := sql.Open("postgres", os.Getenv("POSTGRES_URL"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	migrator, _ := New()
+	pending := migrator.Pending(db)
+	if len(pending) != 0 {
+		t.Fatalf("pending migrations should be 0")
+	}
+	migrator = mustMigrator(New(
+		&Migration{
+			Name: "Using tx, create baz table",
+			Func: func(tx *sql.Tx) error {
+				if _, err := tx.Exec("CREATE TABLE baz (id INT PRIMARY KEY)"); err != nil {
+					return err
+				}
+				return nil
+			},
+		},
+	))
+	pending = migrator.Pending(db)
+	if len(pending) != 1 {
+		t.Fatalf("pending migrations should be 1")
 	}
 }
