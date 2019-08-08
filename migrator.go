@@ -21,7 +21,7 @@ func New(migrations ...interface{}) (*Migrator, error) {
 
 // NewNamed creates a new migrator instance and stating the migrations table name
 func NewNamed(tableName string, migrations ...interface{}) (*Migrator, error) {
-		for _, m := range migrations {
+	for _, m := range migrations {
 		switch m.(type) {
 		case *Migration:
 		case *MigrationNoTx:
@@ -29,7 +29,7 @@ func NewNamed(tableName string, migrations ...interface{}) (*Migrator, error) {
 			return nil, errors.New("migrator: invalid migration type")
 		}
 	}
-  return &Migrator{migrations: migrations, tableName: tableName}, nil
+	return &Migrator{migrations: migrations, tableName: tableName}, nil
 }
 
 // Migrate applies all available migrations
@@ -80,7 +80,7 @@ func (m *Migrator) Pending(db *sql.DB) []interface{} {
 	return m.migrations[count:len(m.migrations)]
 }
 
-func countApplied(db *sql.DB, tableName) (int, error) {
+func countApplied(db *sql.DB, tableName string) (int, error) {
 	// count applied migrations
 	var count int
 	rows, err := db.Query(fmt.Sprintf("SELECT count(*) FROM %s", tableName))

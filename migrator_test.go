@@ -15,24 +15,6 @@ import (
 
 const testTableName = "testMigrationsTable"
 
-func TestPostgres(t *testing.T) {
-	if err := migrateTest("postgres", os.Getenv("POSTGRES_URL")); err != nil {
-		t.Fatal(err)
-	}
-	if err := migrateNamedTest("postgres", os.Getenv("POSTGRES_URL")); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestMySQL(t *testing.T) {
-	if err := migrateTest("mysql", os.Getenv("MYSQL_URL")); err != nil {
-		t.Fatal(err)
-	}
-	if err := migrateNamedTest("mysql", os.Getenv("MYSQL_URL")); err != nil {
-		t.Fatal(err)
-	}
-}
-
 func migrateTest(driverName, url string) error {
 	migrator, err := New(
 		&Migration{
@@ -124,10 +106,16 @@ func TestPostgres(t *testing.T) {
 	if err := migrateTest("postgres", os.Getenv("POSTGRES_URL")); err != nil {
 		t.Fatal(err)
 	}
+	if err := migrateNamedTest("postgres", os.Getenv("POSTGRES_URL")); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestMySQL(t *testing.T) {
 	if err := migrateTest("mysql", os.Getenv("MYSQL_URL")); err != nil {
+		t.Fatal(err)
+	}
+	if err := migrateNamedTest("mysql", os.Getenv("MYSQL_URL")); err != nil {
 		t.Fatal(err)
 	}
 }
