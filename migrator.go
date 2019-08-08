@@ -10,12 +10,20 @@ const tableName = "migrations"
 
 // Migrator is the migrator implementation
 type Migrator struct {
-	migrations []migration
+	migrations []interface{}
 }
 
 // New creates a new migrator instance
-func New(migrations ...migration) *Migrator {
-	return &Migrator{migrations: migrations}
+func New(migrations ...interface{}) (*Migrator, error) {
+	for _, m := range migrations {
+		switch m.(type) {
+		case *Migration:
+		case *MigrationNoTx:
+		default:
+			return nil, errors.New("migrator: invalid migration type")
+		}
+	}
+	return &Migrator{migrations: migrations}, nil
 }
 
 // Migrate applies all available migrations
@@ -44,7 +52,7 @@ func (m *Migrator) Migrate(db *sql.DB) error {
 
 	// plan migrations
 	for idx, migration := range m.migrations[count:len(m.migrations)] {
-		insertVersion := fmt.Sprintf("INSERT INTO %s (id, version) VALUES (%d, '%s')", tableName, idx+count, migration.String())
+		insertVersion := fmt.Sprintf("INSERT INTO %s (id, version) VALUES (%d, '%s')", tableName, idx+count, migration.(fmt.Stringer).String())
 		switch m := migration.(type) {
 		case *Migration:
 			if err := migrate(db, insertVersion, m); err != nil {
@@ -79,10 +87,6 @@ func countApplied(db *sql.DB) (int, error) {
 		return 0, err
 	}
 	return count, nil
-}
-
-type migration interface {
-	String() string
 }
 
 // Migration represents a single migration

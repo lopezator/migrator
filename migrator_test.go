@@ -14,20 +14,8 @@ import (
 	_ "github.com/lib/pq"              // postgres driver
 )
 
-func TestPostgres(t *testing.T) {
-	if err := migrateTest("postgres", os.Getenv("POSTGRES_URL")); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestMySQL(t *testing.T) {
-	if err := migrateTest("mysql", os.Getenv("MYSQL_URL")); err != nil {
-		t.Fatal(err)
-	}
-}
-
 func migrateTest(driverName, url string) error {
-	migrator := New(
+	migrator, err := New(
 		&Migration{
 			Name: "Using tx, encapsulate two queries",
 			Func: func(tx *sql.Tx) error {
@@ -53,7 +41,7 @@ func migrateTest(driverName, url string) error {
 			Name: "Using tx, one embedded query",
 			Func: func(tx *sql.Tx) error {
 				query, err := _escFSString(false, "/testdata/0_bar.sql")
-				if err != nil  {
+				if err != nil {
 					return err
 				}
 				if _, err := tx.Exec(query); err != nil {
@@ -63,6 +51,9 @@ func migrateTest(driverName, url string) error {
 			},
 		},
 	)
+	if err != nil {
+		return err
+	}
 
 	// Migrate both steps up
 	db, err := sql.Open(driverName, url)
@@ -76,6 +67,24 @@ func migrateTest(driverName, url string) error {
 	return nil
 }
 
+func mustMigrator(migrator *Migrator, err error) *Migrator {
+	if err != nil {
+		panic(err)
+	}
+	return migrator
+}
+
+func TestPostgres(t *testing.T) {
+	if err := migrateTest("postgres", os.Getenv("POSTGRES_URL")); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestMySQL(t *testing.T) {
+	if err := migrateTest("mysql", os.Getenv("MYSQL_URL")); err != nil {
+		t.Fatal(err)
+	}
+}
 func TestMigrationNumber(t *testing.T) {
 	db, err := sql.Open("postgres", os.Getenv("POSTGRES_URL"))
 	if err != nil {
@@ -91,7 +100,10 @@ func TestMigrationNumber(t *testing.T) {
 }
 
 func TestDatabaseNotFound(t *testing.T) {
-	migrator := New(&Migration{})
+	migrator, err := New(&Migration{})
+	if err != nil {
+		t.Fatal(err)
+	}
 	db, _ := sql.Open("postgres", "")
 	if err := migrator.Migrate(db); err == nil {
 		t.Fatal(err)
@@ -115,7 +127,7 @@ func TestBadMigrations(t *testing.T) {
 	}{
 		{
 			name: "bad tx migration",
-			input: New(&Migration{
+			input: mustMigrator(New(&Migration{
 				Name: "bad tx migration",
 				Func: func(tx *sql.Tx) error {
 					if _, err := tx.Exec("FAIL FAST"); err != nil {
@@ -123,11 +135,11 @@ func TestBadMigrations(t *testing.T) {
 					}
 					return nil
 				},
-			}),
+			})),
 		},
 		{
 			name: "bad db migration",
-			input: New(&MigrationNoTx{
+			input: mustMigrator(New(&MigrationNoTx{
 				Name: "bad db migration",
 				Func: func(db *sql.DB) error {
 					if _, err := db.Exec("FAIL FAST"); err != nil {
@@ -135,7 +147,7 @@ func TestBadMigrations(t *testing.T) {
 					}
 					return nil
 				},
-			}),
+			})),
 		},
 	}
 
@@ -143,7 +155,7 @@ func TestBadMigrations(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			err := errors.New("bla")
 			err.Error()
-			if err := tt.input.Migrate(db); !strings.Contains(err.Error(), "pq: syntax error")  {
+			if err := tt.input.Migrate(db); !strings.Contains(err.Error(), "pq: syntax error") {
 				t.Fatal(err)
 			}
 		})
@@ -179,7 +191,7 @@ func TestBadMigrationNumber(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	migrator := New(
+	migrator := mustMigrator(New(
 		&Migration{
 			Name: "bad migration number",
 			Func: func(tx *sql.Tx) error {
@@ -189,7 +201,7 @@ func TestBadMigrationNumber(t *testing.T) {
 				return nil
 			},
 		},
-	)
+	))
 	if err := migrator.Migrate(db); err == nil {
 		t.Fatalf("BAD MIGRATION NUMBER should fail: %v", err)
 	}
