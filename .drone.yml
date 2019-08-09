@@ -6,6 +6,11 @@ workspace:
   path: src/github.com/lopezator/migrator
 
 steps:
+  - name: fetch
+    image: docker:git
+    commands:
+      - git fetch --tags
+
   - name: prepare
     image: golang:1.12.5
     commands:
@@ -35,6 +40,16 @@ steps:
     environment:
       CODECOV_TOKEN:
         from_secret: codecov_token
+
+  - name: release
+    image: golang
+    environment:
+      GITHUB_TOKEN:
+        from_secret: github_token
+    commands:
+      - curl -sL https://git.io/goreleaser | bash
+    when:
+      event: tag
 
 services:
   - name: postgres
