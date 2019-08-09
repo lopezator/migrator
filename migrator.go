@@ -6,16 +6,45 @@ import (
 	"fmt"
 )
 
-const tableName = "migrations"
+const defaultTableName = "migrations"
 
 // Migrator is the migrator implementation
 type Migrator struct {
+	tableName  string
 	migrations []interface{}
 }
 
+// Option sets options such migrations or table name.
+type Option func(*Migrator)
+
+// TableName creates an option to allow overriding the default table name
+func TableName(tableName string) Option {
+	return func(m *Migrator) {
+		m.tableName = tableName
+	}
+}
+
+// Migrations creates an option with provided migrations
+func Migrations(migrations ...interface{}) Option {
+	return func(m *Migrator) {
+		m.migrations = migrations
+	}
+}
+
 // New creates a new migrator instance
-func New(migrations ...interface{}) (*Migrator, error) {
-	for _, m := range migrations {
+func New(opts ...Option) (*Migrator, error) {
+	m := &Migrator{
+		tableName: defaultTableName,
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+
+	if len(m.migrations) == 0 {
+		return nil, errors.New("migrator: migrations must be provided")
+	}
+
+	for _, m := range m.migrations {
 		switch m.(type) {
 		case *Migration:
 		case *MigrationNoTx:
@@ -23,7 +52,8 @@ func New(migrations ...interface{}) (*Migrator, error) {
 			return nil, errors.New("migrator: invalid migration type")
 		}
 	}
-	return &Migrator{migrations: migrations}, nil
+
+	return m, nil
 }
 
 // Migrate applies all available migrations
@@ -35,13 +65,13 @@ func (m *Migrator) Migrate(db *sql.DB) error {
 			version VARCHAR(255) NOT NULL,
 			PRIMARY KEY (id)
 		);
-	`, tableName))
+	`, m.tableName))
 	if err != nil {
 		return err
 	}
 
 	// count applied migrations
-	count, err := countApplied(db)
+	count, err := countApplied(db, m.tableName)
 	if err != nil {
 		return err
 	}
@@ -52,7 +82,7 @@ func (m *Migrator) Migrate(db *sql.DB) error {
 
 	// plan migrations
 	for idx, migration := range m.migrations[count:len(m.migrations)] {
-		insertVersion := fmt.Sprintf("INSERT INTO %s (id, version) VALUES (%d, '%s')", tableName, idx+count, migration.(fmt.Stringer).String())
+		insertVersion := fmt.Sprintf("INSERT INTO %s (id, version) VALUES (%d, '%s')", m.tableName, idx+count, migration.(fmt.Stringer).String())
 		switch m := migration.(type) {
 		case *Migration:
 			if err := migrate(db, insertVersion, m); err != nil {
@@ -69,12 +99,15 @@ func (m *Migrator) Migrate(db *sql.DB) error {
 }
 
 // Pending returns all pending (not yet applied) migrations
-func (m *Migrator) Pending(db *sql.DB) []interface{} {
-	count, _ := countApplied(db)
-	return m.migrations[count:len(m.migrations)]
+func (m *Migrator) Pending(db *sql.DB) ([]interface{}, error) {
+	count, err := countApplied(db, m.tableName)
+	if err != nil {
+		return nil, err
+	}
+	return m.migrations[count:len(m.migrations)], nil
 }
 
-func countApplied(db *sql.DB) (int, error) {
+func countApplied(db *sql.DB, tableName string) (int, error) {
 	// count applied migrations
 	var count int
 	rows, err := db.Query(fmt.Sprintf("SELECT count(*) FROM %s", tableName))

@@ -49,15 +49,17 @@ import (
 
 func main() {
     m := migrator.New(
-        &migrator.Migration{
-            Name: "Create table foo",
-            Func: func(tx *sql.Tx) error {
-                if _, err := tx.Exec("CREATE TABLE foo (id INT PRIMARY KEY)"); err != nil {
-                    return err
-                }
-                return nil
+        Migrations(
+            &migrator.Migration{
+                Name: "Create table foo",
+                Func: func(tx *sql.Tx) error {
+                    if _, err := tx.Exec("CREATE TABLE foo (id INT PRIMARY KEY)"); err != nil {
+                        return err
+                    }
+                    return nil
+                },
             },
-        },
+        ),
     )
    
     // Migrate up
@@ -72,7 +74,7 @@ func main() {
 ```
 
 Notes on examples above:
-- Migrator creates/manages a table named `migrations` to keep track of the applied versions
+- Migrator creates/manages a table named `migrations` to keep track of the applied versions. However, if want to customize the table name `TableName("my_migrations")` can be also used.
 
 ### Looking for more examples?
 
