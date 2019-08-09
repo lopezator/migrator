@@ -21,7 +21,7 @@ prepare: setup-env mod-download
 .PHONY: mod-download
 mod-download:
 	@echo "Running download..."
-	go mod download GOPROXY="$(GOPROXY)"
+	GOPROXY="$(GOPROXY)" go mod download
 
 .PHONY: sanity-check
 sanity-check: golangci-lint
