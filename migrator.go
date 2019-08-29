@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 )
 
 const defaultTableName = "migrations"
@@ -82,7 +83,8 @@ func (m *Migrator) Migrate(db *sql.DB) error {
 
 	// plan migrations
 	for idx, migration := range m.migrations[count:len(m.migrations)] {
-		insertVersion := fmt.Sprintf("INSERT INTO %s (id, version) VALUES (%d, '%s')", m.tableName, idx+count, migration.(fmt.Stringer).String())
+		migrationName := strings.Replace(migration.(fmt.Stringer).String(), "'", `\'`, -1)
+		insertVersion := fmt.Sprintf("INSERT INTO %s (id, version) VALUES (%d, '%s')", m.tableName, idx+count, migrationName)
 		switch m := migration.(type) {
 		case *Migration:
 			if err := migrate(db, insertVersion, m); err != nil {

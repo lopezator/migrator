@@ -48,6 +48,16 @@ var migrations = []interface{}{
 			return nil
 		},
 	},
+	// Ensure correct single quote handling, see issues#23
+	&MigrationNoTx{
+		Name: `Using db, execute 'another' query`,
+		Func: func(db *sql.DB) error {
+			if _, err := db.Exec("INSERT INTO foo (id) VALUES (3)"); err != nil {
+				return err
+			}
+			return nil
+		},
+	},
 }
 
 func migrateTest(driverName, url string) error {
