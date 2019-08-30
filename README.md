@@ -74,7 +74,7 @@ func main() {
 ```
 
 Notes on examples above:
-- Migrator creates/manages a table named `migrations` to keep track of the applied versions. However, if want to customize the table name `TableName("my_migrations")` can be also used.
+- Migrator creates/manages a table named `migrations` to keep track of the applied versions. However, if want to customize the table name `TableName("my_migrations")` can be also used.  
 
 ### Looking for more examples?
 
@@ -97,6 +97,10 @@ Adding the functionality to reverse a migration introduces complexity to the API
 We also think that it's a good idea to follow an "append-only" philosophy when coming to database migrations, so correcting a defective migration comes in the form of adding a new migration instead of reversing it.
 
 e.g. After a `CREATE TABLE foo` we'll simply add a new `DROP TABLE foo` instead of reverting the first migration, so both states are reflected both in the code and the database.  
+
+### Caveats
+
+- The name of the migrations must be SQL-safe for your engine of choice. Avoiding conflicting characters like `'` is recommended, otherwise, you will have to escape them by yourself e.g. `''` for PostgreSQL and `\'` for MySQL.
 
 # Motivation
 
