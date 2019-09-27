@@ -67,7 +67,7 @@ func main() {
     if err != nil {
         log.Fatal(err)
     }
-    if err := migrator.Migrate(db); err != nil {
+    if err := m.Migrate(db); err != nil {
         log.Fatal(err)
     }
 }
