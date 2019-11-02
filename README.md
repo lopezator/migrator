@@ -77,7 +77,7 @@ func main() {
 ```
 
 Notes on examples above:
-- Migrator creates/manages a table named `migrations` to keep track of the applied versions. However, if want to customize the table name `TableName("my_migrations")` can be also used.  
+- Migrator creates/manages a table named `migrations` to keep track of the applied versions. However, if want to customize the table name `migrator.TableName("my_migrations")` can be passed to `migrator.New` function as an additional option. 
 
 ### Looking for more examples?
 
