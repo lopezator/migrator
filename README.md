@@ -48,8 +48,8 @@ import (
 )
 
 func main() {
-    m := migrator.New(
-        Migrations(
+    m, err := migrator.New(
+        migrator.Migrations(
             &migrator.Migration{
                 Name: "Create table foo",
                 Func: func(tx *sql.Tx) error {
@@ -61,6 +61,9 @@ func main() {
             },
         ),
     )
+    if err != nil {
+        log.Fatal(err)
+    }
    
     // Migrate up
     db, err := sql.Open("postgres", "postgres://postgres@localhost/foo?sslmode=disable")
