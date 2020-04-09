@@ -77,7 +77,23 @@ func main() {
 ```
 
 Notes on examples above:
-- Migrator creates/manages a table named `migrations` to keep track of the applied versions. However, if want to customize the table name `migrator.TableName("my_migrations")` can be passed to `migrator.New` function as an additional option. 
+
+- Migrator creates/manages a table named `migrations` to keep track of the applied versions. However, if you want to customize the table name `migrator.TableName("my_migrations")` can be passed to `migrator.New` function as an additional option. 
+
+### Logging
+
+By default, migrator prints applying/applied migration info to stdout. 
+If that's enough for you, you can skip this section.
+
+If you need some special formatting or want to use a 3rd party logging library, this could be done by using `WithLogger` option as follows:
+
+```go
+logger := migrator.WithLogger(migrator.LoggerFunc(func(msg string, args ...interface{}) {
+	// Your code here 
+})))
+```
+
+Then you will only need to pass the logger as an option to `migrator.New`. 
 
 ### Looking for more examples?
 

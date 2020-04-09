@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
+	"os"
 )
 
 const defaultTableName = "migrations"
@@ -11,6 +13,7 @@ const defaultTableName = "migrations"
 // Migrator is the migrator implementation
 type Migrator struct {
 	tableName  string
+	logger     Logger
 	migrations []interface{}
 }
 
@@ -24,6 +27,26 @@ func TableName(tableName string) Option {
 	}
 }
 
+// Logger interface
+type Logger interface {
+	Printf(string, ...interface{})
+}
+
+// LoggerFunc is a bridge between Logger and any third party logger
+type LoggerFunc func(string, ...interface{})
+
+// Printf implements Logger interface
+func (f LoggerFunc) Printf(msg string, args ...interface{}) {
+	f(msg, args...)
+}
+
+// WithLogger creates an option to allow overriding the stdout logging
+func WithLogger(logger Logger) Option {
+	return func(m *Migrator) {
+		m.logger = logger
+	}
+}
+
 // Migrations creates an option with provided migrations
 func Migrations(migrations ...interface{}) Option {
 	return func(m *Migrator) {
@@ -34,6 +57,7 @@ func Migrations(migrations ...interface{}) Option {
 // New creates a new migrator instance
 func New(opts ...Option) (*Migrator, error) {
 	m := &Migrator{
+		logger:    log.New(os.Stdout, "migrator: ", 0),
 		tableName: defaultTableName,
 	}
 	for _, opt := range opts {
@@ -83,13 +107,13 @@ func (m *Migrator) Migrate(db *sql.DB) error {
 	// plan migrations
 	for idx, migration := range m.migrations[count:len(m.migrations)] {
 		insertVersion := fmt.Sprintf("INSERT INTO %s (id, version) VALUES (%d, '%s')", m.tableName, idx+count, migration.(fmt.Stringer).String())
-		switch m := migration.(type) {
+		switch mig := migration.(type) {
 		case *Migration:
-			if err := migrate(db, insertVersion, m); err != nil {
+			if err := migrate(db, m.logger, insertVersion, mig); err != nil {
 				return fmt.Errorf("migrator: error while running migrations: %v", err)
 			}
 		case *MigrationNoTx:
-			if err := migrateNoTx(db, insertVersion, m); err != nil {
+			if err := migrateNoTx(db, m.logger, insertVersion, mig); err != nil {
 				return fmt.Errorf("migrator: error while running migrations: %v", err)
 			}
 		}
@@ -149,7 +173,7 @@ func (m *MigrationNoTx) String() string {
 	return m.Name
 }
 
-func migrate(db *sql.DB, insertVersion string, migration *Migration) error {
+func migrate(db *sql.DB, logger Logger, insertVersion string, migration *Migration) error {
 	tx, err := db.Begin()
 	if err != nil {
 		return err
@@ -163,27 +187,27 @@ func migrate(db *sql.DB, insertVersion string, migration *Migration) error {
 		}
 		err = tx.Commit()
 	}()
-	fmt.Println(fmt.Sprintf("migrator: applying migration named '%s'...", migration.Name))
+	logger.Printf("applying migration named '%s'...", migration.Name)
 	if err = migration.Func(tx); err != nil {
 		return fmt.Errorf("error executing golang migration: %s", err)
 	}
 	if _, err = tx.Exec(insertVersion); err != nil {
 		return fmt.Errorf("error updating migration versions: %s", err)
 	}
-	fmt.Println(fmt.Sprintf("migrator: applied migration named '%s'", migration.Name))
+	logger.Printf("applied migration named '%s'", migration.Name)
 
 	return err
 }
 
-func migrateNoTx(db *sql.DB, insertVersion string, migration *MigrationNoTx) error {
-	fmt.Println(fmt.Sprintf("migrator: applying no tx migration named '%s'...", migration.Name))
+func migrateNoTx(db *sql.DB, logger Logger, insertVersion string, migration *MigrationNoTx) error {
+	logger.Printf("applying no tx migration named '%s'...", migration.Name)
 	if err := migration.Func(db); err != nil {
 		return fmt.Errorf("error executing golang migration: %s", err)
 	}
 	if _, err := db.Exec(insertVersion); err != nil {
 		return fmt.Errorf("error updating migration versions: %s", err)
 	}
-	fmt.Println(fmt.Sprintf("migrator: applied no tx migration named '%s'...", migration.Name))
+	logger.Printf("applied no tx migration named '%s'", migration.Name)
 
 	return nil
 }

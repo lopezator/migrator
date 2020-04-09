@@ -5,6 +5,7 @@ package migrator
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 	"testing"
@@ -167,7 +168,7 @@ func TestBadMigrate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := migrate(db, "BAD INSERT VERSION", &Migration{Name: "bad insert version", Func: func(tx *sql.Tx) error {
+	if err := migrate(db, log.New(os.Stdout, "migrator: ", 0), "BAD INSERT VERSION", &Migration{Name: "bad insert version", Func: func(tx *sql.Tx) error {
 		return nil
 	}}); err == nil {
 		t.Fatal("BAD INSERT VERSION should fail!")
@@ -179,7 +180,7 @@ func TestBadMigrateNoTx(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := migrateNoTx(db, "BAD INSERT VERSION", &MigrationNoTx{Name: "bad migrate no tx", Func: func(db *sql.DB) error {
+	if err := migrateNoTx(db, log.New(os.Stdout, "migrator: ", 0), "BAD INSERT VERSION", &MigrationNoTx{Name: "bad migrate no tx", Func: func(db *sql.DB) error {
 		return nil
 	}}); err == nil {
 		t.Fatal("BAD INSERT VERSION should fail!")
