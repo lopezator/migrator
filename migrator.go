@@ -15,8 +15,8 @@ type Migrator struct {
 	tableName       string
 	logger          Logger
 	migrations      []interface{}
-	createSqlFormat string
-	insertSqlFormat string
+	createSQLFormat string
+	insertSQLFormat string
 }
 
 // Option sets options such migrations or table name.
@@ -55,17 +55,17 @@ func WithLogger(logger Logger) Option {
 	}
 }
 
-// WithCreateSqlFormat creates an option to allow overriding the create SQL script format
-func WithCreateSqlFormat(createSql string) Option {
+// WithCreateSQLFormat creates an option to allow overriding the create SQL script format
+func WithCreateSQLFormat(createSQL string) Option {
 	return func(m *Migrator) {
-		m.createSqlFormat = createSql
+		m.createSQLFormat = createSQL
 	}
 }
 
-// WithInsertSqlFormat creates an option to allow overriding the insert SQL script format
-func WithInsertSqlFormat(insertSql string) Option {
+// WithInsertSQLFormat creates an option to allow overriding the insert SQL script format
+func WithInsertSQLFormat(insertSQL string) Option {
 	return func(m *Migrator) {
-		m.insertSqlFormat = insertSql
+		m.insertSQLFormat = insertSQL
 	}
 }
 
@@ -81,14 +81,14 @@ func New(opts ...Option) (*Migrator, error) {
 	m := &Migrator{
 		logger:    log.New(os.Stdout, "migrator: ", 0),
 		tableName: defaultTableName,
-		createSqlFormat: `
+		createSQLFormat: `
 			CREATE TABLE IF NOT EXISTS %s (
 				id INT8 NOT NULL,
 				version VARCHAR(255) NOT NULL,
 				PRIMARY KEY (id)
 			);
 		`,
-		insertSqlFormat: "INSERT INTO %s (id, version) VALUES (?, ?)",
+		insertSQLFormat: "INSERT INTO %s (id, version) VALUES (?, ?)",
 	}
 	for _, opt := range opts {
 		opt(m)
@@ -113,7 +113,7 @@ func New(opts ...Option) (*Migrator, error) {
 // Migrate applies all available migrations
 func (m *Migrator) Migrate(db *sql.DB) error {
 	// create migrations table if doesn't exist
-	_, err := db.Exec(fmt.Sprintf(m.createSqlFormat, m.tableName))
+	_, err := db.Exec(fmt.Sprintf(m.createSQLFormat, m.tableName))
 	if err != nil {
 		return err
 	}
@@ -130,17 +130,17 @@ func (m *Migrator) Migrate(db *sql.DB) error {
 
 	// plan migrations
 	for idx, migration := range m.migrations[count:len(m.migrations)] {
-		sqlStmt := fmt.Sprintf(m.insertSqlFormat, m.tableName)
-		insertId := idx + count
+		sqlStmt := fmt.Sprintf(m.insertSQLFormat, m.tableName)
+		insertID := idx + count
 		insertVersion := migration.(fmt.Stringer).String()
 
 		switch mig := migration.(type) {
 		case *Migration:
-			if err := migrate(db, m.logger, insertArgs{sql: sqlStmt, id: insertId, version: insertVersion,}, mig); err != nil {
+			if err := migrate(db, m.logger, insertArgs{sql: sqlStmt, id: insertID, version: insertVersion,}, mig); err != nil {
 				return fmt.Errorf("migrator: error while running migrations: %v", err)
 			}
 		case *MigrationNoTx:
-			if err := migrateNoTx(db, m.logger, insertArgs{sql: sqlStmt, id: insertId, version: insertVersion,}, mig); err != nil {
+			if err := migrateNoTx(db, m.logger, insertArgs{sql: sqlStmt, id: insertID, version: insertVersion,}, mig); err != nil {
 				return fmt.Errorf("migrator: error while running migrations: %v", err)
 			}
 		}
