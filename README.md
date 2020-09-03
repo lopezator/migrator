@@ -43,11 +43,12 @@ import (
 	"database/sql"
 	"log"
 
-	_ "github.com/lib/pq" // postgres driver
+	_ "github.com/jackc/pgx/v4/stdlib" // postgres driver
 	"github.com/lopezator/migrator"
 )
 
 func main() {
+    // Configure migrations
     m, err := migrator.New(
         migrator.Migrations(
             &migrator.Migration{
@@ -65,11 +66,13 @@ func main() {
         log.Fatal(err)
     }
    
-    // Migrate up
+    // Open database connection
     db, err := sql.Open("postgres", "postgres://postgres@localhost/foo?sslmode=disable")
     if err != nil {
         log.Fatal(err)
     }
+    
+    // Migrate up
     if err := m.Migrate(db); err != nil {
         log.Fatal(err)
     }
