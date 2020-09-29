@@ -7,11 +7,10 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strings"
 	"testing"
 
 	_ "github.com/go-sql-driver/mysql" // mysql driver
-	_ "github.com/lib/pq"              // postgres driver
+	_ "github.com/jackc/pgx/v4/stdlib" // postgres driver
 )
 
 var migrations = []interface{}{
@@ -77,7 +76,7 @@ func mustMigrator(migrator *Migrator, err error) *Migrator {
 }
 
 func TestPostgres(t *testing.T) {
-	if err := migrateTest("postgres", os.Getenv("POSTGRES_URL")); err != nil {
+	if err := migrateTest("pgx", os.Getenv("POSTGRES_URL")); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -88,7 +87,7 @@ func TestMySQL(t *testing.T) {
 	}
 }
 func TestMigrationNumber(t *testing.T) {
-	db, err := sql.Open("postgres", os.Getenv("POSTGRES_URL"))
+	db, err := sql.Open("pgx", os.Getenv("POSTGRES_URL"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -106,14 +105,14 @@ func TestDatabaseNotFound(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	db, _ := sql.Open("postgres", "")
+	db, _ := sql.Open("pgx", "")
 	if err := migrator.Migrate(db); err == nil {
 		t.Fatal(err)
 	}
 }
 
 func TestBadMigrations(t *testing.T) {
-	db, err := sql.Open("postgres", os.Getenv("POSTGRES_URL"))
+	db, err := sql.Open("pgx", os.Getenv("POSTGRES_URL"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -156,8 +155,8 @@ func TestBadMigrations(t *testing.T) {
 	for _, tt := range migrators {
 		t.Run(tt.name, func(t *testing.T) {
 			err := tt.input.Migrate(db)
-			if err != nil && !strings.Contains(err.Error(), "pq: syntax error") {
-				t.Fatal(err)
+			if err == nil {
+				t.Fatal("BAD MIGRATIONS should fail!")
 			}
 		})
 	}
@@ -176,7 +175,7 @@ func TestBadMigrate(t *testing.T) {
 }
 
 func TestBadMigrateNoTx(t *testing.T) {
-	db, err := sql.Open("postgres", os.Getenv("POSTGRES_URL"))
+	db, err := sql.Open("pgx", os.Getenv("POSTGRES_URL"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -209,7 +208,7 @@ func TestBadMigrationNumber(t *testing.T) {
 }
 
 func TestPending(t *testing.T) {
-	db, err := sql.Open("postgres", os.Getenv("POSTGRES_URL"))
+	db, err := sql.Open("pgx", os.Getenv("POSTGRES_URL"))
 	if err != nil {
 		t.Fatal(err)
 	}

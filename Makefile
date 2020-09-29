@@ -8,7 +8,7 @@ MYSQL_URL    = root:mysql@tcp(mysql:3306)/migrator
 
 .PHONY: setup-env
 setup-env:
-	GO111MODULE=off go get -u github.com/golangci/golangci-lint/cmd/golangci-lint
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b . v1.31.0
 	GO111MODULE=off go get -u github.com/mjibson/esc
 
 .PHONY: esc-gen
@@ -29,7 +29,7 @@ sanity-check: golangci-lint
 .PHONY: golangci-lint
 golangci-lint:
 	@echo "Running lint..."
-	golangci-lint run ./...
+	./golangci-lint run ./...
 
 .PHONY: test
 test:
