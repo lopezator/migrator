@@ -67,7 +67,7 @@ func main() {
     }
    
     // Open database connection
-    db, err := sql.Open("postgres", "postgres://postgres@localhost/foo?sslmode=disable")
+    db, err := sql.Open("pgx", "postgres://postgres@localhost/foo?sslmode=disable")
     if err != nil {
         log.Fatal(err)
     }

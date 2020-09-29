@@ -7,20 +7,18 @@ workspace:
 
 steps:
   - name: prepare
-    image: golang:1.12.5
+    image: golang:1.15.2
     commands:
       - make prepare
 
   - name: sanity-check
-    image: golang:1.12.5
+    image: golang:1.15.2
     commands:
       - make sanity-check
 
   - name: test
-    image: golang:1.12.5
+    image: golang:1.15.2
     environment:
-      GO111MODULE: on
-      GOPROXY: https://athens.azurefd.net
       POSTGRES_URL: postgres://postgres@postgres:5432/migrator?sslmode=disable
       MYSQL_URL: root:mysql@tcp(mysql:3306)/migrator
     commands:
