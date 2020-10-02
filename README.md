@@ -163,6 +163,8 @@ $> docker-compose exec migrator make test
 $> docker-compose down
 ```
 
+Make sure you also provide relevant information in your PR as detailed in the [pull request template](https://github.com/lopezator/migrator/blob/master/pull_request_template.md).
+
 ## Logo
 
 The logo was taken from @ashleymcnamara's [gophers repo](https://github.com/ashleymcnamara/gophers). I've just applied slight modifications to it.
