@@ -12,16 +12,17 @@ services:
     tty: true
 
   postgres:
-    image: postgres:11.2
+    image: postgres:14.2
     environment:
       POSTGRES_DB: migrator
+      POSTGRES_PASSWORD: migrator
     ports:
-      - 2345:5432
+      - "2345:5432"
 
   mysql:
-    image: mysql:8.0.15
+    image: mysql:8.0.28
     environment:
       MYSQL_DATABASE: migrator
-      MYSQL_ROOT_PASSWORD: mysql
+      MYSQL_ROOT_PASSWORD: migrator
     ports:
-      - 6033:3306
+      - "6033:3306"

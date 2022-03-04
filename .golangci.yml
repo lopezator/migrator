@@ -3,7 +3,7 @@ linters:
     - errcheck
     - gocritic
     - goimports
-    - golint
+    - revive
     - govet
     - megacheck
 

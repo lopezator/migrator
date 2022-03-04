@@ -18,7 +18,7 @@ Dead simple Go database migration library.
 * Usage as a library, embeddable and extensible on your behalf
 * Support of any database supported by `database/sql`
 * Go code migrations, either transactional or transaction-less, using `*sql.Tx` (`migrator.Migration`) or `*sql.DB` (`migrator.MigrationNoTx`)
-* No need to use `packr`, `gobin` or others, since all migrations are just Go code
+* No need to use `//go:embed` or others, since all migrations are just Go code
 
 # Compatibility
 
@@ -106,7 +106,7 @@ Just examine the [migrator_test.go](migrator_test.go) file.
 
 You still can use your favorite embedding tool to write your migrations inside `.sql` files and load them into migrator!
 
-I provide a simple example using [esc](https://github.com/mjibson/esc) on the `Using tx, one embedded query` test here: [migrator_test](https://github.com/lopezator/migrator/blob/master/migrator_test.go)
+I provide a simple example using `//go:embed` on the `Using tx, one embedded query` test here: [migrator_test](https://github.com/lopezator/migrator/blob/master/migrator_test.go)
 
 ### Erm... Where are the ID's of the migrations to know their order? 🤔
 
