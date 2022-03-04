@@ -2,18 +2,12 @@
 
 SHELL = /bin/bash
 
-GOPROXY      = https://proxy.golang.org
-POSTGRES_URL = postgres://postgres@postgres:5432/migrator?sslmode=disable
-MYSQL_URL    = root:mysql@tcp(mysql:3306)/migrator
+POSTGRES_URL = postgres://postgres:migrator@postgres:5432/migrator?sslmode=disable
+MYSQL_URL    = root:migrator@tcp(mysql:3306)/migrator
 
 .PHONY: setup-env
 setup-env:
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b . v1.31.0
-	GO111MODULE=off go get -u github.com/mjibson/esc
-
-.PHONY: esc-gen
-esc-gen:
-	esc -pkg migrator -private -include=".*.sql$$" -modtime="0" testdata > sql.go
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b . v1.44.2
 
 .PHONY: prepare
 prepare: setup-env mod-download
@@ -21,7 +15,7 @@ prepare: setup-env mod-download
 .PHONY: mod-download
 mod-download:
 	@echo "Running download..."
-	GOPROXY="$(GOPROXY)" go mod download
+	go mod download
 
 .PHONY: sanity-check
 sanity-check: golangci-lint

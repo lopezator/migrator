@@ -1,9 +1,10 @@
-// +build integration
+//go:build integration
 
 package migrator
 
 import (
 	"database/sql"
+	_ "embed"
 	"fmt"
 	"log"
 	"os"
@@ -12,6 +13,9 @@ import (
 	_ "github.com/go-sql-driver/mysql" // mysql driver
 	_ "github.com/jackc/pgx/v4/stdlib" // postgres driver
 )
+
+//go:embed testdata/0_bar.sql
+var mig0bar string
 
 var migrations = []interface{}{
 	&Migration{
@@ -38,11 +42,7 @@ var migrations = []interface{}{
 	&Migration{
 		Name: "Using tx, one embedded query",
 		Func: func(tx *sql.Tx) error {
-			query, err := _escFSString(false, "/testdata/0_bar.sql")
-			if err != nil {
-				return err
-			}
-			if _, err := tx.Exec(query); err != nil {
+			if _, err := tx.Exec(mig0bar); err != nil {
 				return err
 			}
 			return nil

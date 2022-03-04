@@ -1,0 +1,34 @@
+name: "migrator build"
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: prepare
+        run: |
+          docker compose up -d --build
+          docker compose exec -T migrator make prepare
+      - name: sanity-check
+        run: docker compose exec -T migrator make sanity-check
+      - name: test
+        env:
+          POSTGRES_URL: postgres://postgres:migrator@postgres:5432/migrator?sslmode=disable
+          MYSQL_URL: root:migrator@tcp(mysql:3306)/migrator
+        run: |
+          docker compose exec -T migrator make test POSTGRES_URL="${POSTGRES_URL}" MYSQL_URL="${MYSQL_URL}"
+          docker compose cp migrator:/go/src/github.com/lopezator/migrator/coverage.txt .
+      - name: coverage
+        uses: codecov/codecov-action@v2
+        with:
+          files: ./coverage.txt
+      - name: clean
+        run: docker compose down -v
