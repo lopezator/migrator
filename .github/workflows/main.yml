@@ -24,6 +24,7 @@ jobs:
           POSTGRES_URL: postgres://postgres:migrator@postgres:5432/migrator?sslmode=disable
           MYSQL_URL: root:migrator@tcp(mysql:3306)/migrator
         run: |
+          sleep 10
           docker compose exec -T migrator make test POSTGRES_URL="${POSTGRES_URL}" MYSQL_URL="${MYSQL_URL}"
           docker compose cp migrator:/go/src/github.com/lopezator/migrator/coverage.txt .
       - name: coverage
